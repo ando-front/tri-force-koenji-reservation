@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>予約フォーム</title>
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+    #messageArea {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>予約フォーム</h1>
+  <form id="myForm">
+    開始時間：<input type="datetime-local" name="start-time" id="start-time" required /><br />
+    終了時間：<input type="datetime-local" name="end-time" id="end-time" required /><br />
+    メールアドレス：<input type="email" name="email" id="email" required /><br />
+    名前：<input type="text" name="name" id="name" required /><br />
+    電話番号：<input type="tel" name="phone" id="phone" /><br />
+    備考：<textarea name="remarks" id="remarks"></textarea><br />
+    <div id="error-message"></div>
+    <button type="button" onclick="validateForm()">送信</button> 
+  </form>
+
+  <div id="messageArea"></div>
+
+  <script>
+    function validateForm() {
+
+      const startTimeElement = document.getElementById("start-time");
+      const endTimeElement = document.getElementById("end-time");
+      const emailElement = document.getElementById("email");
+      const nameElement = document.getElementById("name");
+      const phoneElement = document.getElementById("phone");
+      const remarksElement = document.getElementById("remarks");
+
+      if (!startTimeElement.value || !endTimeElement.value || !emailElement.value || !nameElement.value) {
+        alert("開始時間、終了時間、メールアドレス、名前は必須項目です。");
+        return;
+      }
+
+      const formData = {
+        startTime: startTimeElement.value,
+        endTime: endTimeElement.value,
+        email: emailElement.value,
+        equipment: remarksElement?.value || "",
+        name: nameElement.value,
+        phone: phoneElement?.value || "",
+        remarks: remarksElement?.value || ""
+      };
+
+      sendData(JSON.stringify(formData));
+    }
+
+    function sendData(formData) {
+      console.log("sendData が実行されました。");
+      console.log("送信するデータ:", formData); // formData の内容を確認
+      document.getElementById("messageArea").textContent = "送信中...";
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          try {
+            if (response) {
+              console.log("成功レスポンス:", response);
+              if (response.status === "ok") {
+                document.getElementById("messageArea").textContent = response.message;
+                document.getElementById("myForm").reset();
+              } else if (response.status === "error") {
+                console.error("エラーレスポンス:", error);
+                document.getElementById("messageArea").textContent = response.message;
+              } else {
+                console.error("不正なレスポンス:", response);
+                document.getElementById("messageArea").textContent = "不明なエラーが発生しました。";
+              }
+            } else {
+              console.error("responseがnullです");
+              document.getElementById("messageArea").textContent = "サーバーからの応答がありません。";
+            }
+          } catch (e) {
+            console.error("レスポンスの処理中にエラー:", e);
+            document.getElementById("messageArea").textContent = "レスポンスの処理中にエラーが発生しました: " + e.message;
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error("Apps Script の呼び出しでエラー:", error);
+          document.getElementById("messageArea").textContent = "サーバーエラーが発生しました。";
+        })
+        .withContentType('application/json') 
+        .doPost(formData);
+      console.log("google.script.run の呼び出し後");
+
+    }
+
+    // イベントリスナーを削除
+    // window.addEventListener('load', (event) => {
+    //   const form = document.getElementById("myForm");
+    //   form.addEventListener('submit', validateForm);
+    // });
+  </script>
+</html>

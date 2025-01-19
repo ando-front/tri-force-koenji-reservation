@@ -1,0 +1,244 @@
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile("index");
+}
+
+function doPost(e) {
+  // ToDo:form no requrement
+  // ToDo:完了画面に戻るボタン、続けて予約ボタン、カレンダーボタン
+  // ToDo：カレンダー登録関数呼び出しをリファクタ
+  // TODO:開始日時プルダウンは分は選択しないようにする
+  // TODO:フォーム画面にスタイルを当てる
+  // ToDo:フィットネス4人、フリーマット10人とする
+  // ToDo：30分刻みの予約とする
+  var formData = e.parameter;
+  console.log(formData);
+  var email = formData.メールアドレス;
+  var equipment = formData.予約施設;
+  var name = formData.氏名;
+  var phone = formData.連絡先;
+  var startTimeString = formData.利用開始日時;
+  // UTCでDateオブジェクトを作成
+  let startTime = new Date(startTimeString);
+
+  var ss = SpreadsheetApp.openById(
+    "1U7sO1pf9uEA2YGmPxv5mk9gP6aE_w6l-ZJNUU6wxEUw" // スプレッドシートID
+  );
+  var sheet = ss.getSheetByName("フォームの回答 2");
+
+  try {
+    // スプレッドシートのタイムゾーンを取得
+    const ssTimeZone = ss.getSpreadsheetTimeZone();
+
+    // startTimeをスプレッドシートのタイムゾーンでフォーマットし、再度Dateオブジェクトに変換
+    const formattedStartTime = Utilities.formatDate(
+      startTime,
+      ssTimeZone,
+      "yyyy/MM/dd HH:mm:ss"
+    );
+    startTime = new Date(formattedStartTime);
+
+    var endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+
+    Logger.log("startTime (Date): " + startTime);
+    Logger.log("endTime (Date): " + endTime);
+  } catch (dateError) {
+    Logger.log(
+      "日付変換エラー: " + dateError + ", startTimeString:" + startTimeString
+    );
+    return ContentService.createTextOutput(
+      "日付の形式が正しくありません。"
+    ).setMimeType(ContentService.MimeType.TEXT);
+  }
+
+  var remarks = formData.備考;
+  var lastRow = sheet.getLastRow();
+  var count = 0;
+
+  for (var i = 2; i <= lastRow; i++) {
+    var existingStartTimeValue = sheet.getRange(i, 10).getValue();
+    Logger.log(
+      "J列" +
+        i +
+        "行目 existingStartTimeValue (raw): " +
+        existingStartTimeValue +
+        ", typeof: " +
+        typeof existingStartTimeValue
+    );
+
+    if (typeof existingStartTimeValue === "number") {
+      const days = Math.floor(existingStartTimeValue);
+      const fractionOfDay = existingStartTimeValue - days;
+      const milliseconds = Math.round(fractionOfDay * 86400000);
+
+      let baseDate = new Date(1899, 11, 30);
+      if (ss.getSpreadsheetLocale() === "en_US") {
+        baseDate = new Date(1899, 11, 31);
+      }
+
+      let existingStartTime = new Date(
+        baseDate.getTime() + days * 86400000 + milliseconds
+      );
+
+      // タイムゾーン変換
+      const formattedExistingStartTime = Utilities.formatDate(
+        existingStartTime,
+        ss.getSpreadsheetTimeZone(),
+        "yyyy/MM/dd HH:mm:ss"
+      );
+      existingStartTime = new Date(formattedExistingStartTime);
+
+      Logger.log(
+        "J列" +
+          i +
+          "行目 existingStartTime (Date): " +
+          existingStartTime +
+          ", getTime(): " +
+          existingStartTime.getTime()
+      );
+      Logger.log(
+        "startTime.getTime() - existingStartTime.getTime() = " +
+          (startTime.getTime() - existingStartTime.getTime())
+      );
+
+      // 日付と時刻を個別に比較
+      if (
+        existingStartTime.getFullYear() === startTime.getFullYear() &&
+        existingStartTime.getMonth() === startTime.getMonth() &&
+        existingStartTime.getDate() === startTime.getDate() &&
+        existingStartTime.getHours() === startTime.getHours()
+      ) {
+        count++;
+        Logger.log("重複カウント: " + count);
+      } else {
+        Logger.log(
+          "不一致：existingStartTime=" +
+            existingStartTime +
+            ", startTime=" +
+            startTime
+        );
+      }
+    } else {
+      Logger.log(
+        "J列の" +
+          i +
+          "行目のデータが数値ではありません: " +
+          existingStartTimeValue
+      );
+    }
+  }
+
+  Logger.log("最終カウント: " + count);
+
+  if (count >= 4) {
+    console.log("この時間帯は満員です。");
+    return ContentService.createTextOutput(
+      "この時間帯は満員です。"
+    ).setMimeType(ContentService.MimeType.TEXT);
+  }
+
+  try {
+    sheet.appendRow([
+      new Date(),
+      email,
+      equipment,
+      name,
+      phone,
+      startTime,
+      endTime,
+      remarks,
+      "",
+    ]);
+
+    const submitResult = submitFormDataToSpreadsheetAndCalendar(
+      formData,
+      startTime,
+      endTime
+    );
+    console.log("予約・カレンダー登録結果：" + submitResult.message);
+
+    return ContentService.createTextOutput("予約が完了しました。").setMimeType(
+      ContentService.MimeType.TEXT
+    );
+  } catch (error) {
+    Logger.log("スプレッドシート保存でエラー: " + error);
+    return {
+      message: "スプレッドシート予約処理中にエラーが発生しました：" + error,
+      status: "error",
+    };
+  }
+}
+function submitFormDataToSpreadsheetAndCalendar(formData, startTime, endTime) {
+  console.log("カレンダー予約：" + formData);
+  try {
+    Logger.log("submitFormDataToSpreadsheetAndCalendar 開始");
+    Logger.log("formData: " + JSON.stringify(formData));
+    Logger.log("startTime: " + startTime);
+    Logger.log("endTime: " + endTime);
+
+    // const ss = SpreadsheetApp.getActiveSpreadsheet();
+    // Logger.log("スプレッドシートを取得");
+    // const sheet = ss.getSheetByName("フォームの回答 1");
+    // Logger.log("シートを取得");
+    // const TimeStamp = new Date();
+
+    // sheet.appendRow([
+    //   TimeStamp,
+    //   formData.email,
+    //   formData.equipment,
+    //   formData.name,
+    //   formData.phone,
+    //   startTime,
+    //   endTime,
+    //   formData.remarks,
+    // ]);
+    // Logger.log("スプレッドシートに書き込み");
+
+    const calendarId =
+      PropertiesService.getScriptProperties().getProperty("CALENDAR_ID");
+    const calendar = CalendarApp.getCalendarById(calendarId);
+    Logger.log("Calendar Object: " + JSON.stringify(calendar)); // カレンダーオブジェクトをJSON文字列としてログ出力
+    if (!calendar) {
+      Logger.log("カレンダーが見つかりません。IDを確認してください。");
+      return {
+        message: "カレンダーが見つかりません。IDを確認してください。",
+        status: "error",
+      };
+    }
+    Logger.log("カレンダー名:" + calendar.getName()); // カレンダー名を取得してログ出力
+    Logger.log("カレンダーを取得");
+
+    const event = calendar.createEvent(
+      "予約：" + formData.氏名 + " 様：" + formData.予約施設,
+      startTime,
+      endTime,
+      { description: formData.備考 }
+    );
+    Logger.log("カレンダーにイベント登録");
+
+    Logger.log("submitFormDataToSpreadsheetAndCalendar 正常終了");
+    return {
+      message: "予約が完了しました。",
+      eventId: event.getId(),
+      status: "ok",
+    };
+  } catch (error) {
+    Logger.log("データ保存またはカレンダー登録でエラー: " + error); // エラー内容を詳細に出力
+    return {
+      message: "予約処理中にエラーが発生しました：" + error,
+      status: "error",
+    }; // エラーメッセージにエラー内容を含める
+  }
+}
+
+function setup() {
+  // Webアプリケーションとしてデプロイするための設定
+  var htmlService = HtmlService.createHtmlOutputFromFile("index");
+  SpreadsheetApp.getUi().showModalDialog(htmlService, "予約フォーム");
+}
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("予約")
+    .addItem("予約フォームを開く", "setup")
+    .addToUi();
+}
