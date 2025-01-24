@@ -5,18 +5,28 @@
   </head>
   <body>
     <form
+      id="myForm"
       action="https://script.google.com/macros/s/AKfycbwbybIX7FJbB2WfmaWdqwWBo5tFiLvAjKYrPvZZ2-o6KNoDA4oU3lRKGCtA1ojJdQ_v/exec"
       method="post"
     >
-      メールアドレス：<input type="text" name="メールアドレス" /><br />
+      メールアドレス：<input
+        type="email"
+        name="メールアドレス"
+        required
+      /><br />
       予約施設：<input
         type="radio"
         name="予約施設"
         value="フリーマット"
+        required
       />フリーマット<br />
-      氏名：<input type="text" name="氏名" /><br />
-      連絡先：<input type="text" name="連絡先" /><br />
-      利用開始日時：<input type="datetime-local" name="利用開始日時" /><br />
+      氏名：<input type="text" name="氏名" required /><br />
+      連絡先：<input type="tel" name="連絡先" required /><br />
+      利用開始日時：<input
+        type="datetime-local"
+        name="利用開始日時"
+        required
+      /><br />
       <input type="submit" value="送信" />
     </form>
 
@@ -25,5 +35,26 @@
       target="_blank"
       >カレンダーを見る</a
     >
+
+    <script>
+      // バリデーションエラーメッセージのカスタマイズ
+      document.getElementById("myForm").addEventListener(
+        "invalid",
+        function (event) {
+          if (event.target.validity.valueMissing) {
+            event.target.setCustomValidity("この項目は必須です。");
+          }
+        },
+        false
+      );
+      // 入力中にエラーメッセージをクリア
+      document.getElementById("myForm").addEventListener(
+        "input",
+        function (event) {
+          event.target.setCustomValidity("");
+        },
+        false
+      );
+    </script>
   </body>
 </html>
