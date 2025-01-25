@@ -2,49 +2,182 @@
 <html>
   <head>
     <base target="_top" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        padding: 20px;
+      }
+      .container {
+        width: 90%;
+        max-width: 600px;
+      }
+      /* ラジオボタンの配置を調整 */
+      .radio-group {
+        display: flex; /* Flexboxを使用 */
+        gap: 20px; /* ラジオボタン間の間隔 */
+      }
+    </style>
   </head>
   <body>
-    <form
-      id="myForm"
-      action="https://script.google.com/macros/s/AKfycbwbybIX7FJbB2WfmaWdqwWBo5tFiLvAjKYrPvZZ2-o6KNoDA4oU3lRKGCtA1ojJdQ_v/exec"
-      method="post"
-    >
-      メールアドレス：<input
-        type="email"
-        name="メールアドレス"
-        required
-      /><br />
-      予約施設：<input
-        type="radio"
-        name="予約施設"
-        value="フリーマット"
-        required
-      />フリーマット<br />
-      氏名：<input type="text" name="氏名" required /><br />
-      連絡先：<input type="tel" name="連絡先" required /><br />
-      利用開始日：<input
-        type="date"
-        name="利用開始日"
-        id="startDate"
-        required
-      /><br />
-      利用開始時間：<select name="利用開始時間" id="startTime" required></select
-      ><br />
-      <!-- 利用開始日時：<input
-        type="datetime-local"
-        name="利用開始日時"
-        required
-      /><br /> -->
-      <input type="submit" value="送信" />
-    </form>
+    <div class="container">
+      <form
+        id="myForm"
+        action="https://script.google.com/macros/s/AKfycbwbybIX7FJbB2WfmaWdqwWBo5tFiLvAjKYrPvZZ2-o6KNoDA4oU3lRKGCtA1ojJdQ_v/exec"
+        method="post"
+      >
+        <div class="row">
+          <div class="input-field col s12">
+            <input
+              id="email"
+              type="email"
+              name="メールアドレス"
+              class="validate"
+              required
+            />
+            <label for="email">メールアドレス</label>
+            <span
+              class="helper-text"
+              data-error="正しく入力してください"
+              data-success="OK"
+            ></span>
+          </div>
+        </div>
 
-    <a
-      href="https://calendar.google.com/calendar/embed?src=cfe744345d0d24b24dd1cae17d21f6c1a20dcea8f7899ca6a449bb2476fc5f08%40group.calendar.google.com&ctz=Asia%2FTokyo"
-      target="_blank"
-      >カレンダーを見る</a
-    >
+        <div class="row">
+          <div class="col s12">
+            <label>予約施設</label><br />
+            <div class="radio-group">
+              <label>
+                <input
+                  class="with-gap"
+                  name="予約施設"
+                  type="radio"
+                  value="フリーマット"
+                  required
+                />
+                <span>フリーマット</span>
+              </label>
+            </div>
+          </div>
+        </div>
 
+        <div class="row">
+          <div class="input-field col s12">
+            <input
+              id="name"
+              type="text"
+              name="氏名"
+              class="validate"
+              required
+            />
+            <label for="name">氏名</label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="input-field col s12">
+            <input
+              id="phone"
+              type="tel"
+              name="連絡先"
+              class="validate"
+              required
+            />
+            <label for="phone">連絡先</label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="input-field col s12">
+            <input
+              type="date"
+              name="利用開始日"
+              id="startDate"
+              class="datepicker"
+              required
+            />
+            <label for="startDate">利用開始日</label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="input-field col s12">
+            <select name="利用開始時間" id="startTime" required></select>
+            <label>利用開始時間</label>
+          </div>
+        </div>
+
+        <button
+          class="btn waves-effect waves-light"
+          type="submit"
+          name="action"
+        >
+          送信
+          <i class="material-icons right">send</i>
+        </button>
+      </form>
+      <a
+        href="https://calendar.google.com/calendar/embed?src=cfe744345d0d24b24dd1cae17d21f6c1a20dcea8f7899ca6a449bb2476fc5f08%40group.calendar.google.com&ctz=Asia%2FTokyo"
+        target="_blank"
+      >
+        <button class="btn">カレンダーを見る</button>
+      </a>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        var dateElems = document.querySelectorAll(".datepicker");
+        var dateInstances = M.Datepicker.init(dateElems, {
+          format: "yyyy-mm-dd",
+          i18n: {
+            months: [
+              "1月",
+              "2月",
+              "3月",
+              "4月",
+              "5月",
+              "6月",
+              "7月",
+              "8月",
+              "9月",
+              "10月",
+              "11月",
+              "12月",
+            ],
+            monthsShort: [
+              "1月",
+              "2月",
+              "3月",
+              "4月",
+              "5月",
+              "6月",
+              "7月",
+              "8月",
+              "9月",
+              "10月",
+              "11月",
+              "12月",
+            ],
+            weekdays: ["日", "月", "火", "水", "木", "金", "土"],
+            weekdaysShort: ["日", "月", "火", "水", "木", "金", "土"],
+            weekdaysAbbrev: ["日", "月", "火", "水", "木", "金", "土"],
+            cancel: "キャンセル",
+            done: "完了",
+          },
+        });
+        var selectElems = document.querySelectorAll("select");
+        var selectInstances = M.FormSelect.init(selectElems);
+      });
+
       // バリデーションエラーメッセージのカスタマイズ
       document.getElementById("myForm").addEventListener(
         "invalid",
@@ -55,7 +188,7 @@
         },
         false
       );
-      // 入力中にエラーメッセージをクリア
+
       document.getElementById("myForm").addEventListener(
         "input",
         function (event) {
@@ -66,22 +199,20 @@
 
       const startTimeSelect = document.getElementById("startTime");
       const startTime = new Date();
-      startTime.setHours(10, 0, 0, 0); // 開始時刻を10:00に設定
+      startTime.setHours(10, 0, 0, 0);
 
       for (let i = 0; i < 6; i++) {
-        // 6個の選択肢（10:00～12:30）
         const option = document.createElement("option");
         const timeString = startTime.toLocaleTimeString("ja-JP", {
           hour: "2-digit",
           minute: "2-digit",
         });
-        option.value = timeString; // 時間のみをvalueに設定
+        option.value = timeString;
         option.text = timeString;
         startTimeSelect.appendChild(option);
-        startTime.setMinutes(startTime.getMinutes() + 30); // 30分進める
+        startTime.setMinutes(startTime.getMinutes() + 30);
       }
 
-      //日付変更時の処理
       document
         .getElementById("startDate")
         .addEventListener("change", function () {
@@ -96,22 +227,21 @@
               selectedDate.getDate() < new Date().getDate())
           ) {
             alert("過去の日付は選択できません");
-            this.value = ""; //日付をクリア
+            this.value = "";
             return;
           }
 
           startTime.setHours(10, 0, 0, 0);
           for (let i = 0; i < 6; i++) {
-            // 6個の選択肢（10:00～12:30）
             const option = document.createElement("option");
             const timeString = startTime.toLocaleTimeString("ja-JP", {
               hour: "2-digit",
               minute: "2-digit",
             });
-            option.value = this.value + " " + timeString; // 日付と時間を組み合わせてvalueに設定
+            option.value = this.value + " " + timeString;
             option.text = timeString;
             startTimeSelect.appendChild(option);
-            startTime.setMinutes(startTime.getMinutes() + 30); // 30分進める
+            startTime.setMinutes(startTime.getMinutes() + 30);
           }
         });
     </script>
