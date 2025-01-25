@@ -22,11 +22,19 @@
       />フリーマット<br />
       氏名：<input type="text" name="氏名" required /><br />
       連絡先：<input type="tel" name="連絡先" required /><br />
-      利用開始日時：<input
+      利用開始日：<input
+        type="date"
+        name="利用開始日"
+        id="startDate"
+        required
+      /><br />
+      利用開始時間：<select name="利用開始時間" id="startTime" required></select
+      ><br />
+      <!-- 利用開始日時：<input
         type="datetime-local"
         name="利用開始日時"
         required
-      /><br />
+      /><br /> -->
       <input type="submit" value="送信" />
     </form>
 
@@ -55,6 +63,57 @@
         },
         false
       );
+
+      const startTimeSelect = document.getElementById("startTime");
+      const startTime = new Date();
+      startTime.setHours(10, 0, 0, 0); // 開始時刻を10:00に設定
+
+      for (let i = 0; i < 6; i++) {
+        // 6個の選択肢（10:00～12:30）
+        const option = document.createElement("option");
+        const timeString = startTime.toLocaleTimeString("ja-JP", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        option.value = timeString; // 時間のみをvalueに設定
+        option.text = timeString;
+        startTimeSelect.appendChild(option);
+        startTime.setMinutes(startTime.getMinutes() + 30); // 30分進める
+      }
+
+      //日付変更時の処理
+      document
+        .getElementById("startDate")
+        .addEventListener("change", function () {
+          startTimeSelect.innerHTML = "";
+          const selectedDate = new Date(this.value);
+          if (
+            selectedDate.getFullYear() < new Date().getFullYear() ||
+            (selectedDate.getFullYear() == new Date().getFullYear() &&
+              selectedDate.getMonth() < new Date().getMonth()) ||
+            (selectedDate.getFullYear() == new Date().getFullYear() &&
+              selectedDate.getMonth() == new Date().getMonth() &&
+              selectedDate.getDate() < new Date().getDate())
+          ) {
+            alert("過去の日付は選択できません");
+            this.value = ""; //日付をクリア
+            return;
+          }
+
+          startTime.setHours(10, 0, 0, 0);
+          for (let i = 0; i < 6; i++) {
+            // 6個の選択肢（10:00～12:30）
+            const option = document.createElement("option");
+            const timeString = startTime.toLocaleTimeString("ja-JP", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            option.value = this.value + " " + timeString; // 日付と時間を組み合わせてvalueに設定
+            option.text = timeString;
+            startTimeSelect.appendChild(option);
+            startTime.setMinutes(startTime.getMinutes() + 30); // 30分進める
+          }
+        });
     </script>
   </body>
 </html>
