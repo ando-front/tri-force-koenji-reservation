@@ -1,3 +1,6 @@
+/* eslint-disable prefer-const */
+/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
 /*
 Copyright 2023 Google LLC
 
