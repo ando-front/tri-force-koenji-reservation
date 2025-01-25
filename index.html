@@ -1,23 +1,10 @@
-<!--
-Copyright 2023 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
 <!doctype html>
-<html>
+<html lang="ja">
   <head>
-    <base target="_top" />
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base target="_top" />
+    <title>予約フォーム</title>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
@@ -29,7 +16,11 @@ limitations under the License.
     <style>
       body {
         font-size: 16px;
-        padding: 10px;
+        padding: 20px;
+      }
+      .container {
+        width: 95%;
+        max-width: 600px;
       }
       .input-field {
         margin-bottom: 20px;
@@ -38,13 +29,9 @@ limitations under the License.
         padding: 10px 20px;
         font-size: 1.2rem;
       }
-      .container {
-        width: 95%; /* スマートフォンで画面いっぱいに表示 */
-        max-width: 600px;
-      }
       .radio-group {
         display: flex;
-        flex-wrap: wrap; /* 必要に応じて折り返し */
+        flex-wrap: wrap;
         gap: 10px;
       }
     </style>
@@ -73,7 +60,6 @@ limitations under the License.
             ></span>
           </div>
         </div>
-
         <div class="row">
           <div class="col s12">
             <label>予約施設</label><br />
@@ -91,7 +77,6 @@ limitations under the License.
             </div>
           </div>
         </div>
-
         <div class="row">
           <div class="input-field col s12">
             <input
@@ -104,7 +89,6 @@ limitations under the License.
             <label for="name">氏名</label>
           </div>
         </div>
-
         <div class="row">
           <div class="input-field col s12">
             <input
@@ -117,7 +101,6 @@ limitations under the License.
             <label for="phone">連絡先</label>
           </div>
         </div>
-
         <div class="row">
           <div class="input-field col s12">
             <input
@@ -130,21 +113,14 @@ limitations under the License.
             <label for="startDate">利用開始日</label>
           </div>
         </div>
-
         <div class="row">
           <div class="input-field col s12">
             <select name="利用開始時間" id="startTime" required></select>
             <label>利用開始時間</label>
           </div>
         </div>
-
-        <button
-          class="btn waves-effect waves-light"
-          type="submit"
-          name="action"
-        >
-          送信
-          <i class="material-icons right">send</i>
+        <button class="btn waves-effect waves-light" type="submit">
+          送信<i class="material-icons right">send</i>
         </button>
       </form>
       <a
@@ -157,9 +133,9 @@ limitations under the License.
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script>
+      // Materializeの初期化
       document.addEventListener('DOMContentLoaded', function () {
-        var dateElems = document.querySelectorAll('.datepicker');
-        var dateInstances = M.Datepicker.init(dateElems, {
+        M.Datepicker.init(document.querySelectorAll('.datepicker'), {
           format: 'yyyy-mm-dd',
           i18n: {
             months: [
@@ -197,75 +173,58 @@ limitations under the License.
             done: '完了',
           },
         });
-        var selectElems = document.querySelectorAll('select');
-        var selectInstances = M.FormSelect.init(selectElems);
+        M.FormSelect.init(document.querySelectorAll('select'));
       });
 
-      // バリデーションエラーメッセージのカスタマイズ
-      document.getElementById('myForm').addEventListener(
-        'invalid',
-        function (event) {
-          if (event.target.validity.valueMissing) {
-            event.target.setCustomValidity('この項目は必須です。');
-          }
-        },
-        false
-      );
+      // バリデーション
+      const form = document.getElementById('myForm');
+      form.addEventListener('invalid', event => {
+        if (event.target.validity.valueMissing) {
+          event.target.setCustomValidity('この項目は必須です。');
+        }
+      });
+      form.addEventListener('input', event => {
+        event.target.setCustomValidity('');
+      });
 
-      document.getElementById('myForm').addEventListener(
-        'input',
-        function (event) {
-          event.target.setCustomValidity('');
-        },
-        false
-      );
+      // 時間選択肢の生成
+      function generateTimeOptions(date) {
+        const startTimeSelect = document.getElementById('startTime');
+        startTimeSelect.innerHTML = ''; // 既存の選択肢をクリア
+        let startTime = new Date();
+        startTime.setHours(10, 0, 0, 0);
 
-      const startTimeSelect = document.getElementById('startTime');
-      const startTime = new Date();
-      startTime.setHours(10, 0, 0, 0);
-
-      for (let i = 0; i < 6; i++) {
-        const option = document.createElement('option');
-        const timeString = startTime.toLocaleTimeString('ja-JP', {
-          hour: '2-digit',
-          minute: '2-digit',
-        });
-        option.value = timeString;
-        option.text = timeString;
-        startTimeSelect.appendChild(option);
-        startTime.setMinutes(startTime.getMinutes() + 30);
+        for (let i = 0; i < 6; i++) {
+          const timeString = startTime.toLocaleTimeString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          const option = document.createElement('option');
+          option.value = date ? date + ' ' + timeString : timeString; // 日付があれば結合
+          option.text = timeString;
+          startTimeSelect.appendChild(option);
+          startTime.setMinutes(startTime.getMinutes() + 30);
+        }
       }
 
+      // 初期時間選択肢の生成
+      generateTimeOptions();
+
+      // 日付変更時の処理
       document
         .getElementById('startDate')
         .addEventListener('change', function () {
-          startTimeSelect.innerHTML = '';
           const selectedDate = new Date(this.value);
-          if (
-            selectedDate.getFullYear() < new Date().getFullYear() ||
-            (selectedDate.getFullYear() == new Date().getFullYear() &&
-              selectedDate.getMonth() < new Date().getMonth()) ||
-            (selectedDate.getFullYear() == new Date().getFullYear() &&
-              selectedDate.getMonth() == new Date().getMonth() &&
-              selectedDate.getDate() < new Date().getDate())
-          ) {
+          const today = new Date();
+
+          if (selectedDate < today) {
             alert('過去の日付は選択できません');
             this.value = '';
+            generateTimeOptions(); // 日付をクリアしたら時間選択肢もリセット
             return;
           }
 
-          startTime.setHours(10, 0, 0, 0);
-          for (let i = 0; i < 6; i++) {
-            const option = document.createElement('option');
-            const timeString = startTime.toLocaleTimeString('ja-JP', {
-              hour: '2-digit',
-              minute: '2-digit',
-            });
-            option.value = this.value + ' ' + timeString;
-            option.text = timeString;
-            startTimeSelect.appendChild(option);
-            startTime.setMinutes(startTime.getMinutes() + 30);
-          }
+          generateTimeOptions(this.value); // 選択された日付を渡す
         });
     </script>
   </body>
