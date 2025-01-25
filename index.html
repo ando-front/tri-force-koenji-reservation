@@ -194,7 +194,10 @@
         let startTime = new Date();
         startTime.setHours(10, 0, 0, 0);
 
-        for (let i = 0; i < 6; i++) {
+        const endTime = new Date(); // 終了時刻を設定
+        endTime.setHours(21, 0, 0, 0);
+
+        while (startTime <= endTime) {
           const timeString = startTime.toLocaleTimeString('ja-JP', {
             hour: '2-digit',
             minute: '2-digit',
@@ -203,7 +206,7 @@
           option.value = date ? date + ' ' + timeString : timeString; // 日付があれば結合
           option.text = timeString;
           startTimeSelect.appendChild(option);
-          startTime.setMinutes(startTime.getMinutes() + 30);
+          startTime.setMinutes(startTime.getMinutes() + 30); // 30分進める
         }
       }
 
