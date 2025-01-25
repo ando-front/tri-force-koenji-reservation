@@ -1,8 +1,23 @@
+/*
+Copyright 2023 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 /**
  * Webアプリケーションとして予約フォームを表示します。
  */
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile("index");
+  return HtmlService.createHtmlOutputFromFile('index');
 }
 
 /**
@@ -19,18 +34,18 @@ function doPost(e) {
   // TODO:終了時刻を３０分刻みで入力できるようにする
 
   const formData = e.parameter;
-  Logger.log("フォームデータ: " + JSON.stringify(formData));
+  Logger.log('フォームデータ: ' + JSON.stringify(formData));
 
   try {
     const startDate = e.parameter.利用開始日;
     const startTime = e.parameter.利用開始時間;
 
     if (!startDate || !startTime) {
-      Logger.log("エラー：利用開始日または利用開始時間が未入力です。");
-      return createTextOutput("利用開始日と利用開始時間は必須です。"); // エラーメッセージを返す
+      Logger.log('エラー：利用開始日または利用開始時間が未入力です。');
+      return createTextOutput('利用開始日と利用開始時間は必須です。'); // エラーメッセージを返す
     }
-    const startTimeString = startDate + " " + startTime.split(" ")[1]; //時刻部分のみ抽出
-    Logger.log("doPost startTimeString:" + startTimeString); //doPost内でのstartTimeStringを確認
+    const startTimeString = startDate + ' ' + startTime.split(' ')[1]; //時刻部分のみ抽出
+    Logger.log('doPost startTimeString:' + startTimeString); //doPost内でのstartTimeStringを確認
     const parsedStartTimeForCheck = parseStartTime(startTimeString); // isTimeSlotFullチェック用
     const parsedStartTime = parseStartTime(startTimeString);
     const endTime = calculateEndTime(parsedStartTime);
@@ -56,7 +71,7 @@ function doPost(e) {
       parsedStartTime,
       endTime
     );
-    Logger.log("カレンダー登録結果：" + calendarResult.message);
+    Logger.log('カレンダー登録結果：' + calendarResult.message);
 
     return HtmlService.createHtmlOutput(
       `
@@ -71,7 +86,7 @@ function doPost(e) {
     `
     ).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   } catch (error) {
-    Logger.log("予約処理エラー: " + error);
+    Logger.log('予約処理エラー: ' + error);
     return HtmlService.createHtmlOutput(
       `
     <div class="container">
@@ -101,14 +116,14 @@ function parseStartTime(startTimeString) {
     const formattedStartTime = Utilities.formatDate(
       startTime,
       ssTimeZone,
-      "yyyy/MM/dd HH:mm:ss"
+      'yyyy/MM/dd HH:mm:ss'
     );
     return new Date(formattedStartTime);
   } catch (error) {
     Logger.log(
-      "日付変換エラー: " + error + ", startTimeString:" + startTimeString
+      '日付変換エラー: ' + error + ', startTimeString:' + startTimeString
     );
-    throw new Error("日付の形式が正しくありません。");
+    throw new Error('日付の形式が正しくありません。');
   }
 }
 
@@ -128,7 +143,7 @@ function calculateEndTime(startTime) {
  */
 function isTimeSlotFull(startTime) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName("フォームの回答 2");
+  const sheet = ss.getSheetByName('フォームの回答 2');
   const lastRow = sheet.getLastRow();
   let count = 0;
 
@@ -146,9 +161,9 @@ function isTimeSlotFull(startTime) {
       }
     } else {
       Logger.log(
-        "スプレッドシートの" +
+        'スプレッドシートの' +
           i +
-          "行目の日付データが不正です: " +
+          '行目の日付データが不正です: ' +
           existingStartTimeValue
       );
     }
@@ -165,45 +180,45 @@ function isTimeSlotFull(startTime) {
 function convertSpreadsheetDate(cellValue, locale) {
   if (cellValue instanceof Date) {
     return cellValue;
-  } else if (typeof cellValue === "number") {
+  } else if (typeof cellValue === 'number') {
     const days = Math.floor(cellValue);
     const fractionOfDay = cellValue - days;
     const milliseconds = Math.round(fractionOfDay * 86400000);
 
     let baseDate = new Date(1899, 11, 30);
-    if (locale === "en_US") {
+    if (locale === 'en_US') {
       baseDate = new Date(1899, 11, 31);
     }
 
     return new Date(baseDate.getTime() + days * 86400000 + milliseconds);
-  } else if (typeof cellValue === "string") {
+  } else if (typeof cellValue === 'string') {
     try {
       // 様々なフォーマットを試す
       let date = new Date(cellValue);
       if (isNaN(date)) {
-        date = new Date(cellValue.replace(/-/g, "/")); // ハイフンをスラッシュに置換
+        date = new Date(cellValue.replace(/-/g, '/')); // ハイフンをスラッシュに置換
       }
       if (isNaN(date)) {
         Logger.log(
-          "文字列からDateへの変換に失敗: " +
+          '文字列からDateへの変換に失敗: ' +
             cellValue +
-            " (様々なフォーマットを試しましたが変換できませんでした。)"
+            ' (様々なフォーマットを試しましたが変換できませんでした。)'
         );
         return null;
       }
       return date;
     } catch (e) {
       Logger.log(
-        "文字列からDateへの変換中にエラーが発生: " +
+        '文字列からDateへの変換中にエラーが発生: ' +
           cellValue +
-          ", エラー内容: " +
+          ', エラー内容: ' +
           e
       );
       return null;
     }
   } else {
     Logger.log(
-      "セルの値が日付、数値、または文字列ではありません: " + cellValue
+      'セルの値が日付、数値、または文字列ではありません: ' + cellValue
     );
     return null;
   }
@@ -219,9 +234,9 @@ function isSameHour(date1, date2) {
   // 引数がDateオブジェクトであることを確認
   if (!(date1 instanceof Date) || !(date2 instanceof Date)) {
     Logger.log(
-      "isSameHourにDateオブジェクトではない値が渡されました。date1:" +
+      'isSameHourにDateオブジェクトではない値が渡されました。date1:' +
         date1 +
-        ", date2:" +
+        ', date2:' +
         date2
     );
     return false;
@@ -242,7 +257,7 @@ function isSameHour(date1, date2) {
  */
 function saveFormDataToSpreadsheet(formData, startTime, endTime) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName("フォームの回答 2");
+  const sheet = ss.getSheetByName('フォームの回答 2');
   sheet.appendRow([
     new Date(),
     formData.メールアドレス,
@@ -252,7 +267,7 @@ function saveFormDataToSpreadsheet(formData, startTime, endTime) {
     startTime,
     endTime,
     formData.備考,
-    "",
+    '',
   ]);
 }
 
@@ -266,51 +281,51 @@ function saveFormDataToSpreadsheet(formData, startTime, endTime) {
 function createCalendarEvent(formData, startTime, endTime) {
   try {
     const calendarId =
-      PropertiesService.getScriptProperties().getProperty("CALENDAR_ID");
+      PropertiesService.getScriptProperties().getProperty('CALENDAR_ID');
     const calendar = CalendarApp.getCalendarById(calendarId);
     if (!calendarId) {
       Logger.log(
-        "エラー: スクリプトプロパティにCALENDAR_IDが設定されていません。"
+        'エラー: スクリプトプロパティにCALENDAR_IDが設定されていません。'
       );
       return {
-        message: "カレンダーIDが設定されていません。",
-        status: "error",
+        message: 'カレンダーIDが設定されていません。',
+        status: 'error',
       };
     }
     if (!calendar) {
-      Logger.log("カレンダーが見つかりません。IDを確認してください。");
+      Logger.log('カレンダーが見つかりません。IDを確認してください。');
       return {
-        message: "カレンダーが見つかりません。IDを確認してください。",
-        status: "error",
+        message: 'カレンダーが見つかりません。IDを確認してください。',
+        status: 'error',
       };
     }
     // startTimeとendTimeがDateオブジェクトであることを確認
     if (!(startTime instanceof Date) || !(endTime instanceof Date)) {
       Logger.log(
-        "startTimeまたはendTimeがDateオブジェクトではありません。startTime:" +
+        'startTimeまたはendTimeがDateオブジェクトではありません。startTime:' +
           startTime +
-          ", endTime:" +
+          ', endTime:' +
           endTime
       );
-      return { message: "開始時刻または終了時刻が不正です。", status: "error" };
+      return { message: '開始時刻または終了時刻が不正です。', status: 'error' };
     }
 
     const event = calendar.createEvent(
-      "予約：" + formData.氏名 + " 様：" + formData.予約施設,
+      '予約：' + formData.氏名 + ' 様：' + formData.予約施設,
       startTime,
       endTime,
       { description: formData.備考 }
     );
     return {
-      message: "予約が完了しました。",
+      message: '予約が完了しました。',
       eventId: event.getId(),
-      status: "ok",
+      status: 'ok',
     };
   } catch (error) {
-    Logger.log("カレンダー登録エラー: " + error);
+    Logger.log('カレンダー登録エラー: ' + error);
     return {
-      message: "カレンダー登録中にエラーが発生しました：" + error,
-      status: "error",
+      message: 'カレンダー登録中にエラーが発生しました：' + error,
+      status: 'error',
     };
   }
 }
@@ -330,8 +345,8 @@ function createTextOutput(text) {
  * メニューから予約フォームを開くための関数。
  */
 function setup() {
-  const htmlService = HtmlService.createHtmlOutputFromFile("index");
-  SpreadsheetApp.getUi().showModalDialog(htmlService, "予約フォーム");
+  const htmlService = HtmlService.createHtmlOutputFromFile('index');
+  SpreadsheetApp.getUi().showModalDialog(htmlService, '予約フォーム');
 }
 
 /**
@@ -339,10 +354,23 @@ function setup() {
  */
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu("予約")
-    .addItem("予約フォームを開く", "setup")
+    .createMenu('予約')
+    .addItem('予約フォームを開く', 'setup')
     .addToUi();
 }
 
 // 定数定義
-const SPREADSHEET_ID = "1U7sO1pf9uEA2YGmPxv5mk9gP6aE_w6l-ZJNUU6wxEUw"; // スプレッドシートID
+const SPREADSHEET_ID = '1U7sO1pf9uEA2YGmPxv5mk9gP6aE_w6l-ZJNUU6wxEUw'; // スプレッドシートID
+
+// テスト対象の関数をexport
+if (typeof module !== 'undefined') {
+  module.exports = {
+    parseStartTime,
+    calculateEndTime,
+    isSameHour,
+    convertSpreadsheetDate,
+    isTimeSlotFull,
+    createCalendarEvent,
+    createTextOutput,
+  };
+}

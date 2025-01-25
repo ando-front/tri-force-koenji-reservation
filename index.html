@@ -1,4 +1,19 @@
-<!DOCTYPE html>
+<!--
+Copyright 2023 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!doctype html>
 <html>
   <head>
     <base target="_top" />
@@ -13,16 +28,24 @@
     />
     <style>
       body {
-        padding: 20px;
+        font-size: 16px;
+        padding: 10px;
+      }
+      .input-field {
+        margin-bottom: 20px;
+      }
+      .btn {
+        padding: 10px 20px;
+        font-size: 1.2rem;
       }
       .container {
-        width: 90%;
+        width: 95%; /* スマートフォンで画面いっぱいに表示 */
         max-width: 600px;
       }
-      /* ラジオボタンの配置を調整 */
       .radio-group {
-        display: flex; /* Flexboxを使用 */
-        gap: 20px; /* ラジオボタン間の間隔 */
+        display: flex;
+        flex-wrap: wrap; /* 必要に応じて折り返し */
+        gap: 10px;
       }
     </style>
   </head>
@@ -134,78 +157,78 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        var dateElems = document.querySelectorAll(".datepicker");
+      document.addEventListener('DOMContentLoaded', function () {
+        var dateElems = document.querySelectorAll('.datepicker');
         var dateInstances = M.Datepicker.init(dateElems, {
-          format: "yyyy-mm-dd",
+          format: 'yyyy-mm-dd',
           i18n: {
             months: [
-              "1月",
-              "2月",
-              "3月",
-              "4月",
-              "5月",
-              "6月",
-              "7月",
-              "8月",
-              "9月",
-              "10月",
-              "11月",
-              "12月",
+              '1月',
+              '2月',
+              '3月',
+              '4月',
+              '5月',
+              '6月',
+              '7月',
+              '8月',
+              '9月',
+              '10月',
+              '11月',
+              '12月',
             ],
             monthsShort: [
-              "1月",
-              "2月",
-              "3月",
-              "4月",
-              "5月",
-              "6月",
-              "7月",
-              "8月",
-              "9月",
-              "10月",
-              "11月",
-              "12月",
+              '1月',
+              '2月',
+              '3月',
+              '4月',
+              '5月',
+              '6月',
+              '7月',
+              '8月',
+              '9月',
+              '10月',
+              '11月',
+              '12月',
             ],
-            weekdays: ["日", "月", "火", "水", "木", "金", "土"],
-            weekdaysShort: ["日", "月", "火", "水", "木", "金", "土"],
-            weekdaysAbbrev: ["日", "月", "火", "水", "木", "金", "土"],
-            cancel: "キャンセル",
-            done: "完了",
+            weekdays: ['日', '月', '火', '水', '木', '金', '土'],
+            weekdaysShort: ['日', '月', '火', '水', '木', '金', '土'],
+            weekdaysAbbrev: ['日', '月', '火', '水', '木', '金', '土'],
+            cancel: 'キャンセル',
+            done: '完了',
           },
         });
-        var selectElems = document.querySelectorAll("select");
+        var selectElems = document.querySelectorAll('select');
         var selectInstances = M.FormSelect.init(selectElems);
       });
 
       // バリデーションエラーメッセージのカスタマイズ
-      document.getElementById("myForm").addEventListener(
-        "invalid",
+      document.getElementById('myForm').addEventListener(
+        'invalid',
         function (event) {
           if (event.target.validity.valueMissing) {
-            event.target.setCustomValidity("この項目は必須です。");
+            event.target.setCustomValidity('この項目は必須です。');
           }
         },
         false
       );
 
-      document.getElementById("myForm").addEventListener(
-        "input",
+      document.getElementById('myForm').addEventListener(
+        'input',
         function (event) {
-          event.target.setCustomValidity("");
+          event.target.setCustomValidity('');
         },
         false
       );
 
-      const startTimeSelect = document.getElementById("startTime");
+      const startTimeSelect = document.getElementById('startTime');
       const startTime = new Date();
       startTime.setHours(10, 0, 0, 0);
 
       for (let i = 0; i < 6; i++) {
-        const option = document.createElement("option");
-        const timeString = startTime.toLocaleTimeString("ja-JP", {
-          hour: "2-digit",
-          minute: "2-digit",
+        const option = document.createElement('option');
+        const timeString = startTime.toLocaleTimeString('ja-JP', {
+          hour: '2-digit',
+          minute: '2-digit',
         });
         option.value = timeString;
         option.text = timeString;
@@ -214,9 +237,9 @@
       }
 
       document
-        .getElementById("startDate")
-        .addEventListener("change", function () {
-          startTimeSelect.innerHTML = "";
+        .getElementById('startDate')
+        .addEventListener('change', function () {
+          startTimeSelect.innerHTML = '';
           const selectedDate = new Date(this.value);
           if (
             selectedDate.getFullYear() < new Date().getFullYear() ||
@@ -226,19 +249,19 @@
               selectedDate.getMonth() == new Date().getMonth() &&
               selectedDate.getDate() < new Date().getDate())
           ) {
-            alert("過去の日付は選択できません");
-            this.value = "";
+            alert('過去の日付は選択できません');
+            this.value = '';
             return;
           }
 
           startTime.setHours(10, 0, 0, 0);
           for (let i = 0; i < 6; i++) {
-            const option = document.createElement("option");
-            const timeString = startTime.toLocaleTimeString("ja-JP", {
-              hour: "2-digit",
-              minute: "2-digit",
+            const option = document.createElement('option');
+            const timeString = startTime.toLocaleTimeString('ja-JP', {
+              hour: '2-digit',
+              minute: '2-digit',
             });
-            option.value = this.value + " " + timeString;
+            option.value = this.value + ' ' + timeString;
             option.text = timeString;
             startTimeSelect.appendChild(option);
             startTime.setMinutes(startTime.getMinutes() + 30);
