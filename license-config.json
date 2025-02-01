@@ -9,6 +9,8 @@
     ".github",
     "CONTRIBUTING",
     "build",
+    "src",
+    "test",
     "dist"
   ],
   "license": "license-header.txt",
