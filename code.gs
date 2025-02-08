@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /* eslint-disable prefer-const */
 /* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
@@ -58,8 +59,7 @@ function doPost(e) {
         <div class="container">
           <div class="card-panel red lighten-4">
             <span class="red-text text-darken-4">この時間帯は満員です。</span><br><br>
-            <button class="btn" onclick="window.history.back()">予約フォームに戻る</button>
-            <button class="btn" onclick="window.location.href='index.html'">続けて予約する</button>
+            <button class="btn" onclick="window.location.href="https://script.google.com/macros/s/AKfycbyHaNhv9Ew5ISgOeA4k2TTzPKDf-V-pXd79-foxC2jJmdSxFBzeYofunU_biEt8Qb9f/exec">予約フォームに戻る</button>
             <a href="https://calendar.google.com/calendar/embed?src=cfe744345d0d24b24dd1cae17d21f6c1a20dcea8f7899ca6a449bb2476fc5f08%40group.calendar.google.com&ctz=Asia%2FTokyo" target="_blank"><button class="btn">カレンダーを見る</button></a>
           </div>
         </div>
@@ -80,8 +80,7 @@ function doPost(e) {
       <div class="container">
         <div class="card-panel teal lighten-4">
           <span class="teal-text text-darken-4">予約が完了しました。</span><br><br>
-          <button class="btn" onclick="window.history.back()">予約フォームに戻る</button>
-          <button class="btn" onclick="window.location.href='index.html'">続けて予約する</button>
+          <button class="btn" onclick="window.location.href="https://script.google.com/macros/s/AKfycbyHaNhv9Ew5ISgOeA4k2TTzPKDf-V-pXd79-foxC2jJmdSxFBzeYofunU_biEt8Qb9f/exec">予約フォームに戻る</button>
           <a href="https://calendar.google.com/calendar/embed?src=cfe744345d0d24b24dd1cae17d21f6c1a20dcea8f7899ca6a449bb2476fc5f08%40group.calendar.google.com&ctz=Asia%2FTokyo" target="_blank"><button class="btn">カレンダーを見る</button></a>
         </div>
       </div>
@@ -94,8 +93,7 @@ function doPost(e) {
     <div class="container">
       <div class="card-panel deep-orange lighten-4">
         <span class="deep-orange-text text-darken-4">予約処理中にエラーが発生しました：${error}</span><br><br>
-        <button class="btn" onclick="window.history.back()">予約フォームに戻る</button>
-        <button class="btn" onclick="window.location.href='index.html'">続けて予約する</button>
+        <button class="btn" onclick="window.location.href="https://script.google.com/macros/s/AKfycbyHaNhv9Ew5ISgOeA4k2TTzPKDf-V-pXd79-foxC2jJmdSxFBzeYofunU_biEt8Qb9f/exec">予約フォームに戻る</button>
         <a href="https://calendar.google.com/calendar/embed?src=cfe744345d0d24b24dd1cae17d21f6c1a20dcea8f7899ca6a449bb2476fc5f08%40group.calendar.google.com&ctz=Asia%2FTokyo" target="_blank"><button class="btn">カレンダーを見る</button></a>
       </div>
     </div>
