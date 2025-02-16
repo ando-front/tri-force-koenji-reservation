@@ -88,8 +88,8 @@ function showMessage(message, color) {
     <div class="container">
       <div class="card-panel ${color} lighten-4">
         <span class="${color}-text text-darken-4">${message}</span><br><br>
-        <button class="btn" onclick="window.location.href='https://script.google.com/macros/s/AKfycbyHaNhv9Ew5ISgOeA4k2TTzPKDf-V-pXd79-foxC2jJmdSxFBzeYofunU_biEt8Qb9f/exec'">予約フォームに戻る</button>
-        <a href="https://calendar.google.com/calendar/embed?src=cfe744345d0d24b24dd1cae17d21f6c1a20dcea8f7899ca6a449bb2476fc5f08%40group.calendar.google.com&ctz=Asia%2FTokyo" target="_blank"><button class="btn">カレンダーを見る</button></a>
+        <button class="btn" onclick="window.location.href='${RECEPTION_URL}'">予約フォームに戻る</button>
+        <a href="https://calendar.google.com/calendar/embed?src=${CALENDAR_ID}&ctz=Asia%2FTokyo" target="_blank"><button class="btn">カレンダーを見る</button></a>
       </div>
     </div>
   `
@@ -327,6 +327,14 @@ function createCalendarEvent(formData, startTime, endTime) {
   }
 }
 
+// 定数定義
+const SPREADSHEET_ID =
+  PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+const CALENDAR_ID =
+  PropertiesService.getScriptProperties().getProperty('CALENDAR_ID');
+const RECEPTION_URL =
+  PropertiesService.getScriptProperties().getProperty('RECEPTION_URL');
+
 /**
  * テキスト出力を作成します。
  * @param {string} text - 出力するテキスト
@@ -355,9 +363,6 @@ function onOpen() {
     .addItem('予約フォームを開く', 'setup')
     .addToUi();
 }
-
-// 定数定義
-const SPREADSHEET_ID = '1U7sO1pf9uEA2YGmPxv5mk9gP6aE_w6l-ZJNUU6wxEUw'; // スプレッドシートID
 
 // テスト対象の関数をexport
 if (typeof module !== 'undefined') {
