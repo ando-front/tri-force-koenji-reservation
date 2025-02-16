@@ -21,7 +21,9 @@ limitations under the License.
  * Webアプリケーションとして予約フォームを表示します。
  */
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index');
+  return HtmlService.createHtmlOutputFromFile('index').setXFrameOptionsMode(
+    HtmlService.XFrameOptionsMode.ALLOWALL
+  );
 }
 
 /**
