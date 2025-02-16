@@ -21,9 +21,9 @@ limitations under the License.
  * Webアプリケーションとして予約フォームを表示します。
  */
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index').setXFrameOptionsMode(
-    HtmlService.XFrameOptionsMode.ALLOWALL
-  );
+  return HtmlService.createHtmlOutputFromFile('index')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 /**
@@ -32,9 +32,6 @@ function doGet() {
  * @return {ContentService} - 結果のテキスト出力
  */
 function doPost(e) {
-  // ToDo:予約完了画面（または満員画面）に「フォーム戻る」ボタンと「続けて予約する」ボタンと「カレンダーを見る」ボタンを追加する
-  // ToDo：30分刻みの予約とする
-  // TODO:カレンダーURLの変数化
   // TODO:終了時刻を３０分刻みで入力できるようにする
 
   const formData = e.parameter;
