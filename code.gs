@@ -33,7 +33,6 @@ function doGet() {
  */
 function doPost(e) {
   // ToDo:予約完了画面（または満員画面）に「フォーム戻る」ボタンと「続けて予約する」ボタンと「カレンダーを見る」ボタンを追加する
-  // ToDo:フィットネス4人、フリーマット10人とする
   // ToDo：30分刻みの予約とする
   // TODO:カレンダーURLの変数化
   // TODO:終了時刻を３０分刻みで入力できるようにする
@@ -44,6 +43,7 @@ function doPost(e) {
   try {
     const startDate = e.parameter.利用開始日;
     const startTime = e.parameter.利用開始時間;
+    const facility = e.parameter.予約施設;
 
     if (!startDate || !startTime) {
       Logger.log('エラー：利用開始日または利用開始時間が未入力です。');
@@ -55,7 +55,7 @@ function doPost(e) {
     const parsedStartTime = parseStartTime(startTimeString);
     const endTime = calculateEndTime(parsedStartTime);
 
-    if (isTimeSlotFull(parsedStartTimeForCheck)) {
+    if (isTimeSlotFull(parsedStartTimeForCheck, facility)) {
       return showMessage('この時間帯は満員です。', 'red'); // 満員メッセージを表示
     }
 
@@ -135,34 +135,37 @@ function calculateEndTime(startTime) {
  * @param {Date} startTime - 開始時刻
  * @return {boolean} - 満員かどうか
  */
-function isTimeSlotFull(startTime) {
+function isTimeSlotFull(startTime, facility) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName('フォームの回答 2');
   const lastRow = sheet.getLastRow();
   let count = 0;
+  let maxCapacity = 0;
+
+  if (facility === 'フリーマット') {
+    maxCapacity = 10;
+  } else if (facility === 'フィットネス') {
+    maxCapacity = 4;
+  } else {
+    Logger.log('不正な施設名です: ' + facility);
+    return false;
+  }
 
   for (let i = 2; i <= lastRow; i++) {
     const existingStartTimeValue = sheet.getRange(i, 10).getValue();
+    const existingFacility = sheet.getRange(i, 3).getValue();
     const existingStartTime = convertSpreadsheetDate(
       existingStartTimeValue,
       ss.getSpreadsheetLocale()
     );
 
-    // existingStartTimeがDateオブジェクトであることを確認してからisSameHourを呼び出す
-    if (existingStartTime instanceof Date) {
+    if (existingStartTime instanceof Date && existingFacility === facility) {
       if (isSameHour(existingStartTime, startTime)) {
         count++;
       }
-    } else {
-      Logger.log(
-        'スプレッドシートの' +
-          i +
-          '行目の日付データが不正です: ' +
-          existingStartTimeValue
-      );
     }
   }
-  return count >= 4; // 定員4名
+  return count >= maxCapacity;
 }
 
 /**

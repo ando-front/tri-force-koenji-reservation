@@ -86,8 +86,20 @@ limitations under the License.
                   type="radio"
                   value="フリーマット"
                   required
+                  onclick="updateCapacity(10)"
                 />
                 <span>フリーマット</span>
+              </label>
+              <label>
+                <input
+                  class="with-gap"
+                  name="予約施設"
+                  type="radio"
+                  value="フィットネス"
+                  required
+                  onclick="updateCapacity(4)"
+                />
+                <span>フィットネス</span>
               </label>
             </div>
           </div>
@@ -148,6 +160,12 @@ limitations under the License.
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script>
+      let capacity = 4; // 初期値はフィットネス
+
+      function updateCapacity(newCapacity) {
+        capacity = newCapacity;
+      }
+
       // Materializeの初期化
       document.addEventListener('DOMContentLoaded', function () {
         M.Datepicker.init(document.querySelectorAll('.datepicker'), {
