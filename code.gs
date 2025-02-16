@@ -54,17 +54,7 @@ function doPost(e) {
     const endTime = calculateEndTime(parsedStartTime);
 
     if (isTimeSlotFull(parsedStartTimeForCheck)) {
-      return HtmlService.createHtmlOutput(
-        `
-        <div class="container">
-          <div class="card-panel red lighten-4">
-            <span class="red-text text-darken-4">この時間帯は満員です。</span><br><br>
-            <button class="btn" onclick="window.location.href='https://script.google.com/macros/s/AKfycbyHaNhv9Ew5ISgOeA4k2TTzPKDf-V-pXd79-foxC2jJmdSxFBzeYofunU_biEt8Qb9f/exec'">予約フォームに戻る</button>
-            <a href="https://calendar.google.com/calendar/embed?src=cfe744345d0d24b24dd1cae17d21f6c1a20dcea8f7899ca6a449bb2476fc5f08%40group.calendar.google.com&ctz=Asia%2FTokyo" target="_blank"><button class="btn">カレンダーを見る</button></a>
-          </div>
-        </div>
-      `
-      ).setSandboxMode(HtmlService.SandboxMode.IFRAME);
+      return showMessage('この時間帯は満員です。', 'red'); // 満員メッセージを表示
     }
 
     saveFormDataToSpreadsheet(formData, parsedStartTime, endTime);
@@ -75,31 +65,33 @@ function doPost(e) {
     );
     Logger.log('カレンダー登録結果：' + calendarResult.message);
 
-    return HtmlService.createHtmlOutput(
-      `
-      <div class="container">
-        <div class="card-panel teal lighten-4">
-          <span class="teal-text text-darken-4">予約が完了しました。</span><br><br>
-          <button class="btn" onclick="window.location.href='https://script.google.com/macros/s/AKfycbyHaNhv9Ew5ISgOeA4k2TTzPKDf-V-pXd79-foxC2jJmdSxFBzeYofunU_biEt8Qb9f/exec'">予約フォームに戻る</button>
-          <a href="https://calendar.google.com/calendar/embed?src=cfe744345d0d24b24dd1cae17d21f6c1a20dcea8f7899ca6a449bb2476fc5f08%40group.calendar.google.com&ctz=Asia%2FTokyo" target="_blank"><button class="btn">カレンダーを見る</button></a>
-        </div>
-      </div>
-    `
-    ).setSandboxMode(HtmlService.SandboxMode.IFRAME);
+    return showMessage('予約が完了しました。', 'teal'); // 予約完了メッセージを表示
   } catch (error) {
     Logger.log('予約処理エラー: ' + error);
-    return HtmlService.createHtmlOutput(
-      `
+    return showMessage(
+      '予約処理中にエラーが発生しました：' + error,
+      'deep-orange'
+    ); // エラーメッセージを表示
+  }
+}
+
+/**
+ * HTMLメッセージを表示する
+ * @param {string} message - メッセージ
+ * @param {string} color - カードの色 (red, teal, deep-orange)
+ */
+function showMessage(message, color) {
+  return HtmlService.createHtmlOutput(
+    `
     <div class="container">
-      <div class="card-panel deep-orange lighten-4">
-        <span class="deep-orange-text text-darken-4">予約処理中にエラーが発生しました：${error}</span><br><br>
+      <div class="card-panel ${color} lighten-4">
+        <span class="${color}-text text-darken-4">${message}</span><br><br>
         <button class="btn" onclick="window.location.href='https://script.google.com/macros/s/AKfycbyHaNhv9Ew5ISgOeA4k2TTzPKDf-V-pXd79-foxC2jJmdSxFBzeYofunU_biEt8Qb9f/exec'">予約フォームに戻る</button>
         <a href="https://calendar.google.com/calendar/embed?src=cfe744345d0d24b24dd1cae17d21f6c1a20dcea8f7899ca6a449bb2476fc5f08%40group.calendar.google.com&ctz=Asia%2FTokyo" target="_blank"><button class="btn">カレンダーを見る</button></a>
       </div>
     </div>
-    `
-    ).setSandboxMode(HtmlService.SandboxMode.IFRAME);
-  }
+  `
+  ).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 }
 
 /**
