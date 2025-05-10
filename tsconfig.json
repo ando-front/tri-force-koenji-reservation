@@ -14,5 +14,12 @@
     "allowUnreachableCode": false,
     "allowUnusedLabels": false
   },
-  "include": ["src/**/*", "test/**/*", "rollup.config.mjs"]
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "rollup.config.mjs"
+  ],
+  "exclude": [
+    "dist"
+  ]
 }

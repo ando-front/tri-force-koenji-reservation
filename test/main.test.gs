@@ -41,3 +41,115 @@ describe("parseStartTime", function() {
     }
   });
 });
+
+describe("isTimeSlotFull", function() {
+  it("should return false if the time slot is not full", function() {
+    // モックデータの設定
+    SpreadsheetApp = {
+      openById: function() {
+        return {
+          getSheetByName: function() {
+            return {
+              getLastRow: function() {
+                return 1; // データがない場合
+              },
+              getRange: function() {
+                return {
+                  getValue: function() {
+                    return "";
+                  }
+                };
+              }
+            };
+          }
+        };
+      }
+    };
+    var startTime = new Date(2023, 4, 10, 10, 0, 0);
+    var facility = "フリーマット";
+    var result = isTimeSlotFull(startTime, facility);
+    assert(result === false, "should return false");
+  });
+
+  it("should return true if the time slot is full", function() {
+    // モックデータの設定
+    SpreadsheetApp = {
+      openById: function() {
+        return {
+          getSheetByName: function() {
+            return {
+              getLastRow: function() {
+                return 11; // データがある場合
+              },
+              getRange: function(row, column) {
+                if (column === 3) {
+                  return {
+                    getValue: function() {
+                      return "フリーマット";
+                    }
+                  };
+                } else if (column === 10) {
+                  return {
+                    getValue: function() {
+                      return new Date(2023, 4, 10, 10, 0, 0);
+                    }
+                  };
+                } else {
+                  return {
+                    getValue: function() {
+                      return "";
+                    }
+                  };
+                }
+              }
+            };
+          }
+        };
+      }
+    };
+    var startTime = new Date(2023, 4, 10, 10, 0, 0);
+    var facility = "フリーマット";
+    var result = isTimeSlotFull(startTime, facility);
+    assert(result === true, "should return true");
+  });
+});
+
+describe("convertSpreadsheetDate", function() {
+  it("should convert a valid spreadsheet date number", function() {
+    var spreadsheetDate = 44984.416666666664; // 2023/05/10 10:00
+    // モックデータの設定
+    SpreadsheetApp = {
+      openById: function() {
+        return {
+          getSpreadsheetLocale: function() {
+            return "ja_JP";
+          }
+        };
+      }
+    };
+    var date = convertSpreadsheetDate(spreadsheetDate, "ja_JP");
+    assert(date instanceof Date, "date is not a Date object");
+    assert(date.getFullYear() === 2023, "year is incorrect");
+    assert(date.getMonth() === 4, "month is incorrect");
+    assert(date.getDate() === 10, "date is incorrect");
+    assert(date.getHours() === 10, "hours is incorrect");
+    assert(date.getMinutes() === 0, "minutes is incorrect");
+  });
+
+  it("should convert a valid spreadsheet date string", function() {
+    var spreadsheetDate = "2023/05/10 10:00";
+    var date = convertSpreadsheetDate(spreadsheetDate, "ja_JP");
+    assert(date instanceof Date, "date is not a Date object");
+    assert(date.getFullYear() === 2023, "year is incorrect");
+    assert(date.getMonth() === 4, "month is incorrect");
+    assert(date.getDate() === 10, "date is incorrect");
+    assert(date.getHours() === 10, "hours is incorrect");
+    assert(date.getMinutes() === 0, "minutes is incorrect");
+  });
+
+  it("should return null for an invalid spreadsheet date", function() {
+    var spreadsheetDate = "invalid date";
+    var date = convertSpreadsheetDate(spreadsheetDate, "ja_JP");
+    assert(date === null, "date should be null");
+  });
+});

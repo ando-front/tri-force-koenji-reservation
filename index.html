@@ -18,6 +18,7 @@ limitations under the License.
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base target="_top" />
     <title>予約フォーム</title>
     <link
       rel="stylesheet"
@@ -55,7 +56,7 @@ limitations under the License.
       <h3>Tri-force Koenji会員専用サイト</h3>
       <form
         id="myForm"
-        action="https://script.google.com/macros/s/AKfycbyHaNhv9Ew5ISgOeA4k2TTzPKDf-V-pXd79-foxC2jJmdSxFBzeYofunU_biEt8Qb9f/exec"
+        action="https://script.google.com/macros/s/AKfycbzw4NRcHhbreNfe0BP96JW2ok9AJF-2PSsbdJYQ9TUmXxAgzziD0-dFNrmV-np2kLVH/exec"
         method="post"
       >
         <div class="row">
@@ -159,6 +160,108 @@ limitations under the License.
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-    <script src="script.js"></script>
+    <script>
+      let capacity = 4; // 初期値はフィットネス
+
+      function updateCapacity(newCapacity) {
+        capacity = newCapacity;
+      }
+
+      // Materializeの初期化
+      document.addEventListener('DOMContentLoaded', function () {
+        M.Datepicker.init(document.querySelectorAll('.datepicker'), {
+          format: 'yyyy-mm-dd',
+          i18n: {
+            months: [
+              '1月',
+              '2月',
+              '3月',
+              '4月',
+              '5月',
+              '6月',
+              '7月',
+              '8月',
+              '9月',
+              '10月',
+              '11月',
+              '12月',
+            ],
+            monthsShort: [
+              '1月',
+              '2月',
+              '3月',
+              '4月',
+              '5月',
+              '6月',
+              '7月',
+              '8月',
+              '9月',
+              '10月',
+              '11月',
+              '12月',
+            ],
+            weekdays: ['日', '月', '火', '水', '木', '金', '土'],
+            weekdaysShort: ['日', '月', '火', '水', '木', '金', '土'],
+            weekdaysAbbrev: ['日', '月', '火', '水', '木', '金', '土'],
+            cancel: 'キャンセル',
+            done: '完了',
+          },
+        });
+        M.FormSelect.init(document.querySelectorAll('select'));
+      });
+
+      // バリデーション
+      const form = document.getElementById('myForm');
+      form.addEventListener('invalid', event => {
+        if (event.target.validity.valueMissing) {
+          event.target.setCustomValidity('この項目は必須です。');
+        }
+      });
+      form.addEventListener('input', event => {
+        event.target.setCustomValidity('');
+      });
+
+      // 時間選択肢の生成
+      function generateTimeOptions(date) {
+        const startTimeSelect = document.getElementById('startTime');
+        startTimeSelect.innerHTML = ''; // 既存の選択肢をクリア
+        let startTime = date ? new Date(date) : new Date(); // 日付があればその日付、なければ今日の日付で初期化
+        startTime.setHours(7, 0, 0, 0);
+
+        const endTime = new Date(); // 終了時刻を設定
+        endTime.setHours(21, 0, 0, 0);
+
+        while (startTime <= endTime) {
+          const timeString = startTime.toLocaleTimeString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          const option = document.createElement('option');
+          option.value = timeString; // 修正点：時刻のみを設定
+          option.text = timeString;
+          startTimeSelect.appendChild(option);
+          startTime.setMinutes(startTime.getMinutes() + 30); // 30分進める
+        }
+      }
+      // 初期時間選択肢の生成
+      generateTimeOptions();
+
+      // 日付変更時の処理
+      document
+        .getElementById('startDate')
+        .addEventListener('change', function () {
+          const selectedDate = new Date(this.value);
+          const today = new Date();
+
+          if (selectedDate < today) {
+            alert('過去の日付は選択できません');
+            this.value = '';
+            generateTimeOptions(); // 日付をクリアしたら時間選択肢もリセット
+            return;
+          }
+
+          generateTimeOptions(this.value); // 選択された日付を渡す
+        });
+    </script>
   </body>
 </html>
