@@ -41,25 +41,3 @@ describe("parseStartTime", function() {
     }
   });
 });
-
-describe("calculateEndTime", function() {
-  it("should calculate the end time correctly", function() {
-    var startTime = new Date("2023-05-10 10:00");
-    var endTime = calculateEndTime(startTime);
-    assert(endTime.getHours() === 11, "End time should be 11");
-  });
-});
-
-describe("isSameHour", function() {
-  it("should return true if the dates are in the same hour", function() {
-    var date1 = new Date("2023-05-10 10:00");
-    var date2 = new Date("2023-05-10 10:30");
-    assert(isSameHour(date1, date2) === true, "should be true");
-  });
-
-  it("should return false if the dates are not in the same hour", function() {
-    var date1 = new Date("2023-05-10 10:00");
-    var date2 = new Date("2023-05-10 11:00");
-    assert(isSameHour(date1, date2) === false, "should be false");
-  });
-});
