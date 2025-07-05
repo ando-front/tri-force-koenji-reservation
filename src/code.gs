@@ -63,3 +63,9 @@ describe("isSameHour", function() {
     assert(isSameHour(date1, date2) === false, "should be false");
   });
 });
+
+function runTests() {
+  var adapter = new GasMochaAdapter();
+  adapter.run();
+  Logger.log(adapter.getSummary());
+}

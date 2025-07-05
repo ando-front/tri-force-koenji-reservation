@@ -29,13 +29,13 @@ GasMochaAdapter.prototype.getSummary = function () {
 
 GasMochaAdapter.prototype.run = function () {
   const self = this;
-  const describe = function (suiteName, fn) {
+  describe = function (suiteName, fn) {
     self.currentSuite = suiteName;
     self.stats.suites++;
     fn.call(this);
   };
 
-  const it = function (testName, fn) {
+  it = function (testName, fn) {
     self.stats.tests++;
     const test = {
       title: testName,
@@ -57,13 +57,6 @@ GasMochaAdapter.prototype.run = function () {
   };
 
   // Run tests
-  eval(
-    UrlFetchApp.fetch(
-      'https://raw.githubusercontent.com/fossamagna/gas-mocha-adapter/master/src/gas-mocha-adapter-lib.js'
-    ).getContentText()
-  );
-  eval(UrlFetchApp.fetch('https://script.google.com/macros/s/1U5BGrBwdlH5aRjrI9pkFX6iDhgnS8lw0u1ZYh7k3juL8n0Awb7d16pYt/exec').getContentText()); // This should point to the src/code.gs file after deployment
-
   return this;
 };
 
