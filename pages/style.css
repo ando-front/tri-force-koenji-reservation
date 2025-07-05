@@ -1,0 +1,209 @@
+/* style.css - GitHub Pages用カスタムスタイル */
+
+body {
+    background-color: #f5f5f5;
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    padding: 20px;
+}
+
+.container {
+    width: 95%;
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+h3 {
+    color: #2e7d32;
+    margin-bottom: 2rem;
+    font-weight: 300;
+}
+
+.card-panel {
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    padding: 2rem;
+}
+
+.input-field {
+    margin-bottom: 20px;
+}
+
+.btn {
+    background-color: #4caf50;
+    border-radius: 25px;
+    padding: 10px 20px;
+    font-size: 1.2rem;
+}
+
+.btn:hover {
+    background-color: #45a049;
+}
+
+.btn.blue {
+    background-color: #2196f3;
+}
+
+.btn.blue:hover {
+    background-color: #1976d2;
+}
+
+.input-field label {
+    color: #666;
+}
+
+.input-field input:focus + label,
+.input-field textarea:focus + label {
+    color: #4caf50;
+}
+
+.input-field input:focus,
+.input-field textarea:focus {
+    border-bottom: 1px solid #4caf50;
+    box-shadow: 0 1px 0 0 #4caf50;
+}
+
+.dropdown-content li > a, .dropdown-content li > span {
+    color: #333;
+}
+
+#result {
+    margin-top: 2rem;
+}
+
+.teal-text i, .red-text i {
+    vertical-align: middle;
+    margin-right: 0.5rem;
+}
+
+/* ラジオボタンのスタイル */
+.radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin-right: 2rem;
+}
+
+.radio-group label span {
+    margin-left: 8px;
+}
+
+/* ヘルパーテキストのスタイル */
+.helper-text {
+    font-size: 0.8rem;
+    margin-top: 4px;
+}
+
+/* 日付ピッカーのスタイル調整 */
+.datepicker-date-display {
+    background-color: #4caf50;
+}
+
+.datepicker-day-button:focus {
+    background-color: #4caf50;
+}
+
+/* レスポンシブデザイン */
+@media screen and (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+    
+    .container {
+        margin: 1rem auto;
+        padding: 0 0.5rem;
+        width: 98%;
+    }
+    
+    .card-panel {
+        padding: 1rem;
+    }
+    
+    h3 {
+        font-size: 1.8rem;
+        text-align: center;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .radio-group {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .radio-group label {
+        margin-right: 0;
+        margin-bottom: 8px;
+    }
+}
+
+/* アニメーション効果 */
+.card-panel {
+    transition: box-shadow 0.3s ease;
+}
+
+.card-panel:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.btn {
+    transition: all 0.3s ease;
+}
+
+/* フォーカス状態の改善 */
+.input-field input:focus,
+.input-field textarea:focus {
+    outline: none;
+}
+
+/* 成功・エラーメッセージのスタイル */
+.teal-text {
+    color: #00695c !important;
+}
+
+.red-text {
+    color: #c62828 !important;
+}
+
+/* ローディング状態のスタイル */
+.btn:disabled {
+    background-color: #cccccc !important;
+    cursor: not-allowed;
+}
+
+/* カスタムトーストスタイル */
+.toast {
+    border-radius: 4px;
+}
+
+/* マテリアルアイコンの調整 */
+.material-icons {
+    vertical-align: middle;
+}
+
+/* フォームの全体的な見た目の調整 */
+.row {
+    margin-bottom: 10px;
+}
+
+/* セレクトボックスのスタイル調整 */
+.select-wrapper input.select-dropdown {
+    border-bottom: 1px solid #9e9e9e;
+}
+
+.select-wrapper input.select-dropdown:focus {
+    border-bottom: 1px solid #4caf50;
+    box-shadow: 0 1px 0 0 #4caf50;
+}

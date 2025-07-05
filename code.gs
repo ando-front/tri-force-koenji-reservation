@@ -40,13 +40,112 @@ function doPost(e) {
   Logger.log('フォームデータ: ' + JSON.stringify(formData));
 
   try {
-    return processFormData(formData);
+    // GitHub Pages からのリクエストかどうかを判定
+    const isApiRequest = e.parameter.apiRequest === 'true' || 
+                        e.postData && e.postData.type === 'application/x-www-form-urlencoded';
+    
+    if (isApiRequest) {
+      // API リクエストの場合はJSON レスポンスを返す
+      const result = processFormDataForApi(formData);
+      return ContentService
+        .createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON)
+        .setHeaders({
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        });
+    } else {
+      // 従来のGAS Web App からのリクエストの場合
+      return processFormData(formData);
+    }
   } catch (error) {
     Logger.log('予約処理エラー: ' + error);
-    return showMessage(
-      '予約処理中にエラーが発生しました：' + error,
-      'deep-orange'
-    ); // エラーメッセージを表示
+    
+    // API リクエストの場合はJSON エラーレスポンス
+    if (e.parameter.apiRequest === 'true') {
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: false,
+          message: 'サーバーエラーが発生しました: ' + error
+        }))
+        .setMimeType(ContentService.MimeType.JSON)
+        .setHeaders({
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        });
+    } else {
+      return showMessage(
+        '予約処理中にエラーが発生しました：' + error,
+        'deep-orange'
+      );
+    }
+  }
+}
+
+/**
+ * OPTIONS リクエストへの対応（CORS プリフライト）
+ */
+function doOptions(e) {
+  return ContentService
+    .createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT)
+    .setHeaders({
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
+}
+
+/**
+ * API リクエスト用のフォームデータ処理
+ * @param {Object} formData - フォームデータ
+ * @return {Object} - JSON レスポンス用オブジェクト
+ */
+function processFormDataForApi(formData) {
+  const startDate = formData.利用開始日;
+  const startTime = formData.利用開始時間;
+  const facility = formData.予約施設;
+
+  if (!startDate || !startTime) {
+    Logger.log('エラー：利用開始日または利用開始時間が未入力です。');
+    return {
+      success: false,
+      message: '利用開始日と利用開始時間は必須です。'
+    };
+  }
+
+  const startTimeString = startDate + ' ' + startTime.split(' ')[1];
+  Logger.log('API doPost startTimeString:' + startTimeString);
+  const parsedStartTimeForCheck = parseStartTime(startTimeString);
+  const parsedStartTime = parseStartTime(startTimeString);
+  const endTime = calculateEndTime(parsedStartTime);
+
+  if (isTimeSlotFull(parsedStartTimeForCheck, facility)) {
+    return {
+      success: false,
+      message: 'この時間帯は満員です。'
+    };
+  }
+
+  try {
+    saveFormDataToSpreadsheet(formData, parsedStartTime, endTime);
+    const calendarResult = createCalendarEvent(formData, parsedStartTime, endTime);
+    Logger.log('カレンダー登録結果：' + calendarResult.message);
+
+    return {
+      success: true,
+      message: '予約が完了しました。',
+      reservationId: generateReservationId(),
+      calendarEventId: calendarResult.eventId || null
+    };
+  } catch (error) {
+    Logger.log('予約保存エラー: ' + error);
+    return {
+      success: false,
+      message: '予約の保存中にエラーが発生しました。'
+    };
   }
 }
 
