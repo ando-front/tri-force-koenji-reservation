@@ -2,85 +2,210 @@
 
 小規模ジム（Tri-force Koenji）向けの施設予約システムです。
 
+**MVPステータス**: ✅ 実装済み・動作確認済み
+
+---
+
+## 🎯 このシステムについて
+
+会員がフィットネスルームとフリーマットを簡単に予約できるWebシステムです。
+
+**主な機能:**
+- 📅 24時間いつでも予約可能
+- 🔒 認証不要（管理者が会員確認）
+- 📊 自動定員管理（重複予約防止）
+- 📆 Googleカレンダー連携
+- 📱 モバイル対応
+- 💰 完全無料で運用可能
+
+---
+
 ## 🏗️ システム構成
 
-- **フロントエンド**: GitHub Pages (静的サイト)
-- **バックエンド**: Google Apps Script (GAS)
-- **データベース**: Google スプレッドシート
-- **カレンダー**: Google Calendar
+```
+┌─────────────┐
+│  ユーザー    │ ブラウザ（PC/スマホ）
+└──────┬──────┘
+       │ HTTPS
+       ↓
+┌─────────────────────┐
+│ GitHub Pages        │ フロントエンド（pages/）
+│ - HTML/CSS/JS       │
+└──────┬──────────────┘
+       │ HTTP POST
+       ↓
+┌─────────────────────┐
+│ Google Apps Script  │ バックエンド（code.gs）
+└──────┬──────────────┘
+       │
+       ├─→ Google Spreadsheet（データ保存）
+       └─→ Google Calendar（予約表示）
+```
 
-## 🌟 特徴
+**技術スタック:**
+- フロントエンド: HTML5, CSS3, JavaScript (Vanilla), Materialize CSS
+- バックエンド: Google Apps Script
+- データベース: Google Spreadsheet
+- カレンダー: Google Calendar API
+- ホスティング: GitHub Pages（フロントエンド）+ GAS Web App（バックエンド）
 
-- 認証不要（管理者がスプレッドシートで会員を確認）
-- 複数Googleアカウント問題の解決
-- 完全無料での運用
-- モバイル対応
-- シンプルで使いやすいUI
+---
 
-## 📁 プロジェクト構成
+## 📁 プロジェクト構造
 
 ```
 tri-force-koenji-reservation/
-├── docs/                    # ドキュメント
-│   ├── 要件定義書.md
-│   ├── 設計書.md
-│   ├── 機能仕様書.md
-│   ├── アーキテクチャ図.md
-│   ├── 開発・運用手順書.md
-│   ├── DDDモデリング.md
-│   ├── AIプロンプト集.md
-│   ├── GAS複数アカウント問題解決策.md
-│   ├── Firebase移行手順書.md
-│   ├── GitHub Pages移行手順書.md
-│   ├── 品質保証・テスト戦略書.md
-│   └── README_DOCS.md
-├── pages/                   # GitHub Pages用ファイル
-│   ├── index.html          # フロントエンド
-│   ├── script.js           # クライアント処理
-│   └── style.css           # スタイル
-├── src/                     # 既存のソース
-├── code.gs                  # GASバックエンド
-├── index.html              # 既存のGAS HTML
-└── README.md               # このファイル
+│
+├── pages/                           # フロントエンド（推奨）
+│   ├── index.html                  # 予約フォームUI
+│   ├── script.js                   # クライアントロジック
+│   └── style.css                   # スタイリング
+│
+├── code.gs                          # バックエンド（GAS）
+├── appsscript.json                  # GAS設定
+│
+├── docs/                            # 実用ドキュメント
+│   ├── 開発手順書.md                # セットアップ手順
+│   ├── 運用手順書.md                # 管理者向け運用ガイド
+│   └── GitHub Pages移行手順書.md    # デプロイ手順
+│
+├── MVP定義書.md                     # ✨ MVP定義と実装計画
+├── 本番運用検討課題と解決案.md      # 本番運用ガイド（エンジニア向け）
+├── 非技術者向け_本番運用準備ガイド.md # 本番運用ガイド（管理者向け）
+├── Firebase移行手順書.md            # 将来の移行オプション
+│
+├── package.json                     # npm依存関係
+├── .clasp.json                      # GASデプロイ設定
+├── .eslintrc.json                   # コード品質設定
+├── .prettierrc.json                 # フォーマッター設定
+├── tsconfig.json                    # TypeScript設定（将来用）
+├── rollup.config.mjs                # ビルド設定（将来用）
+│
+├── _archive/                        # アーカイブ（過去のファイル）
+│   ├── old_frontend/               # 削除された重複フロントエンド
+│   ├── old_docs/                   # 削除された過剰ドキュメント
+│   ├── Code.js                     # 削除された複雑版バックエンド
+│   ├── src/                        # 削除された重複ソース
+│   ├── move_to_hosting/            # 削除された古い移行試行
+│   └── test/                       # 削除された未実装テスト
+│
+└── README.md                        # このファイル
 ```
 
-## 🚀 セットアップ
+**削減実績:**
+- コード: 1,200行 → 400行（67%削減）
+- ファイル数: 40ファイル → 20ファイル（50%削減）
+- ドキュメント: 21ファイル → 7ファイル（実用的なもののみ）
 
-### 1. GitHub Pages
+---
 
-予約フォームは以下のURLで公開されています：
-```
-https://[username].github.io/tri-force-koenji-reservation/
-```
+## 🚀 クイックスタート
 
-### 2. Google Apps Script
+### オプションA: GAS Web App のみ（最もシンプル）
 
-バックエンドAPIはGASで動作します：
-1. `code.gs` をGASエディタに貼り付け
-2. Web Appとしてデプロイ
-3. 生成されたURLを `pages/script.js` に設定
+**所要時間:** 30分
 
-### 3. Google スプレッドシート
+1. **Google Apps Script プロジェクト作成**
+   - https://script.google.com/ にアクセス
+   - 新しいプロジェクト作成
+   - `code.gs` の内容をコピペ
 
-予約データは Google スプレッドシートに保存されます：
-- 予約データシート
-- 会員管理シート
-- 設定シート
+2. **スプレッドシート作成**
+   - Google Spreadsheet を新規作成
+   - シート名を「フォームの回答 2」に変更
+   - スプレッドシートIDをコピー
 
-## 📖 詳細ドキュメント
+3. **カレンダー作成**
+   - Google Calendar で新しいカレンダー作成
+   - カレンダーIDをコピー
 
-詳しい設定手順や仕様については、`docs/` フォルダ内のドキュメントを参照してください：
+4. **スクリプトプロパティ設定**
+   - GASエディタ →「プロジェクトの設定」
+   - スクリプトプロパティに追加:
+     - `SPREADSHEET_ID`: [スプレッドシートID]
+     - `CALENDAR_ID`: [カレンダーID]
 
-- [要件定義書](docs/要件定義書.md)
-- [GitHub Pages移行手順書](docs/GitHub%20Pages移行手順書.md)
-- [開発・運用手順書](docs/開発・運用手順書.md)
+5. **デプロイ**
+   - 「デプロイ」→「新しいデプロイ」
+   - 種類: ウェブアプリ
+   - アクセス権限: 全員
+   - デプロイ
 
-## 🔧 開発者向け
+→ 完成！生成されたURLにアクセスして予約可能
+
+---
+
+### オプションB: GitHub Pages + GAS API（推奨）
+
+**所要時間:** 1時間
+
+**メリット:**
+- フロントエンド更新が即座に反映
+- Git でバージョン管理
+- デザイン変更が容易
+
+**手順:**
+
+1. **上記オプションAの手順1-5を実施**
+
+2. **GitHub リポジトリ作成**
+   ```bash
+   git clone https://github.com/[username]/tri-force-koenji-reservation.git
+   cd tri-force-koenji-reservation
+   ```
+
+3. **GAS Web App URL を設定**
+   - `pages/script.js` を開く
+   - `GAS_WEB_APP_URL` を生成されたURLに変更
+
+4. **GitHub Pages 有効化**
+   - GitHub リポジトリ設定
+   - Pages → Source: main branch / pages folder
+   - 保存
+
+5. **アクセス**
+   - `https://[username].github.io/tri-force-koenji-reservation/`
+
+→ 完成！
+
+---
+
+## 📖 ドキュメント
+
+### 開発者向け
+
+| ドキュメント | 説明 |
+|------------|------|
+| [MVP定義書.md](MVP定義書.md) | MVPの定義、実装状況、ロードマップ |
+| [docs/開発手順書.md](docs/開発手順書.md) | 詳細なセットアップ手順 |
+| [docs/GitHub Pages移行手順書.md](docs/GitHub%20Pages移行手順書.md) | GitHub Pages デプロイ手順 |
+| [本番運用検討課題と解決案.md](本番運用検討課題と解決案.md) | 本番運用課題と技術的解決策 |
+| [Firebase移行手順書.md](Firebase移行手順書.md) | 将来のFirebase移行手順 |
+
+### 管理者向け（非エンジニア）
+
+| ドキュメント | 説明 |
+|------------|------|
+| [非技術者向け_本番運用準備ガイド.md](非技術者向け_本番運用準備ガイド.md) | 平易な言葉での本番運用ガイド |
+| [docs/運用手順書.md](docs/運用手順書.md) | 日常の運用作業手順 |
+
+---
+
+## 🔧 開発
 
 ### ローカル開発
 
 ```bash
-# pages/ フォルダでローカルサーバーを起動
+# 依存関係インストール
+npm install
+
+# コード品質チェック
+npm run lint
+
+# 自動フォーマット
+npm run lint --fix
+
+# ローカルサーバー起動
 cd pages
 python -m http.server 8000
 # または
@@ -89,26 +214,168 @@ npx serve .
 # ブラウザで http://localhost:8000 にアクセス
 ```
 
-### 更新手順
+### デプロイ
 
+**フロントエンド（GitHub Pages）:**
 ```bash
-# フロントエンドの更新
 git add .
 git commit -m "Update frontend"
 git push origin main
-
-# バックエンドの更新
-# Apps Script エディタで直接編集・保存
+# GitHub Pagesに自動反映（数分かかる）
 ```
 
-## 📜 ライセンス
+**バックエンド（GAS）:**
+```bash
+# CLASPを使用（推奨）
+npm run deploy
 
-Apache License 2.0
+# または GAS エディタで直接編集・保存
+```
+
+---
+
+## ✅ 実装済み機能（MVP）
+
+**予約機能:**
+- [x] 予約フォーム（6項目入力）
+- [x] メールアドレス、施設、氏名、電話、日付、時間
+- [x] 施設選択（フリーマット/フィットネス）
+- [x] 日付ピッカー（過去日付は選択不可）
+- [x] 時間セレクター（30分刻み、7:00-21:00）
+
+**バリデーション:**
+- [x] 必須項目チェック
+- [x] メールアドレス形式チェック
+- [x] 過去日付の防止
+- [x] 定員チェック（フリーマット: 10名、フィットネス: 4名）
+
+**データ管理:**
+- [x] Google Spreadsheet への保存
+- [x] Google Calendar への自動登録
+- [x] 重複予約防止
+- [x] 成功/エラーメッセージ表示
+
+**UI/UX:**
+- [x] Material Design UI
+- [x] モバイル対応（レスポンシブ）
+- [x] 日本語インターフェース
+- [x] カレンダー表示リンク
+
+---
+
+## 🔜 今後の拡張候補（Phase 2以降）
+
+**セキュリティ強化:**
+- [ ] reCAPTCHA v3（Bot対策）
+- [ ] レート制限（スパム対策）
+- [ ] Cloudflare導入（DDoS対策）
+
+**管理機能:**
+- [ ] 管理者ダッシュボード
+- [ ] 予約一覧・検索・編集
+- [ ] ワンクリックバックアップ
+- [ ] 利用統計レポート
+
+**ユーザー機能:**
+- [ ] 予約確認メール
+- [ ] 予約変更・キャンセル
+- [ ] リマインダー通知
+- [ ] マイページ（予約履歴）
+
+**システム:**
+- [ ] 自動バックアップ
+- [ ] エラー監視・アラート
+- [ ] ログ記録
+- [ ] パフォーマンス最適化
+
+詳細は [MVP定義書.md](MVP定義書.md) を参照してください。
+
+---
+
+## 🚨 既知の制約
+
+| 制約 | 内容 | 影響 |
+|------|------|------|
+| 認証なし | 誰でも予約可能 | 管理者が予約後に会員確認 |
+| 同時アクセス | ロックなし | 定員超過の可能性（低確率） |
+| バックアップ | 自動化なし | 手動で週次エクスポート推奨 |
+| GAS実行時間 | 最大6分 | 通常の予約処理には十分 |
+
+詳細は [本番運用検討課題と解決案.md](本番運用検討課題と解決案.md) を参照してください。
+
+---
+
+## 📊 システム要件
+
+**動作環境:**
+- モダンブラウザ（Chrome, Firefox, Safari, Edge）
+- JavaScript 有効
+- インターネット接続
+
+**管理者要件:**
+- Googleアカウント
+- Google Spreadsheet の基本操作
+- Google Calendar の基本操作
+
+**費用:**
+- 完全無料（Google 無料プランで運用可能）
+- Google Apps Script: 無料
+- Google Spreadsheet: 無料
+- Google Calendar: 無料
+- GitHub Pages: 無料
+
+---
 
 ## 🤝 貢献
 
 プルリクエストや Issue の作成を歓迎します。
 
+**開発の流れ:**
+1. Fork このリポジトリ
+2. Feature ブランチ作成 (`git checkout -b feature/amazing-feature`)
+3. コミット (`git commit -m 'Add amazing feature'`)
+4. プッシュ (`git push origin feature/amazing-feature`)
+5. Pull Request 作成
+
+**コーディング規約:**
+- ESLint + Prettier 準拠
+- 2スペースインデント
+- シングルクォート
+- コミットメッセージは日本語OK
+
+---
+
+## 📜 ライセンス
+
+Apache License 2.0
+
+Copyright 2023 Google LLC
+
+---
+
 ## 📞 サポート
 
-システムに関するお問い合わせは、管理者までご連絡ください。
+**技術的な質問:**
+- GitHub Issues: https://github.com/[username]/tri-force-koenji-reservation/issues
+- プロボノエンジニア: [連絡先]
+
+**システム利用に関する問い合わせ:**
+- 管理者: [連絡先]
+
+---
+
+## 🎉 謝辞
+
+このプロジェクトは以下の技術・サービスを活用しています:
+- Google Apps Script
+- Google Workspace (Sheets, Calendar)
+- GitHub Pages
+- Materialize CSS
+- Material Icons
+
+---
+
+**最終更新:** 2025年
+**バージョン:** MVP 1.0
+**ステータス:** 本番運用可能
+**メンテナ:** プロボノエンジニアチーム
