@@ -101,72 +101,125 @@ tri-force-koenji-reservation/
 
 ## 🚀 クイックスタート
 
-### オプションA: GAS Web App のみ（最もシンプル）
+**デプロイ方法**: GitHub Pages + GAS API
 
-**所要時間:** 30分
+**所要時間**: 約1時間
 
-1. **Google Apps Script プロジェクト作成**
-   - https://script.google.com/ にアクセス
-   - 新しいプロジェクト作成
-   - `code.gs` の内容をコピペ
+### ステップ1: Google Apps Script セットアップ（30分）
 
-2. **スプレッドシート作成**
-   - Google Spreadsheet を新規作成
-   - シート名を「フォームの回答 2」に変更
-   - スプレッドシートIDをコピー
+#### 1. Google Apps Script プロジェクト作成
+- https://script.google.com/ にアクセス
+- 「新しいプロジェクト」をクリック
+- プロジェクト名を「Tri-force Koenji 予約システム」に変更
+- `code.gs` の内容をコピーして貼り付け
 
-3. **カレンダー作成**
-   - Google Calendar で新しいカレンダー作成
-   - カレンダーIDをコピー
+#### 2. Google Spreadsheet 作成
+- 新しいGoogle Spreadsheetを作成
+- シート名を「フォームの回答 2」に変更
+- URLからスプレッドシートIDをコピー
+  - 例: `https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit`
 
-4. **スクリプトプロパティ設定**
-   - GASエディタ →「プロジェクトの設定」
-   - スクリプトプロパティに追加:
-     - `SPREADSHEET_ID`: [スプレッドシートID]
-     - `CALENDAR_ID`: [カレンダーID]
+#### 3. Google Calendar 作成
+- Google Calendarで新しいカレンダーを作成
+- カレンダー名: 「Tri-force Koenji 予約」
+- 設定 → カレンダーの統合 → カレンダーIDをコピー
 
-5. **デプロイ**
-   - 「デプロイ」→「新しいデプロイ」
-   - 種類: ウェブアプリ
-   - アクセス権限: 全員
-   - デプロイ
+#### 4. スクリプトプロパティ設定
+- GASエディタ → 「プロジェクトの設定」（歯車アイコン）
+- 「スクリプトプロパティ」セクションで「プロパティを追加」
+- 以下の3つを設定:
 
-→ 完成！生成されたURLにアクセスして予約可能
+| プロパティ名 | 値 |
+|-------------|---|
+| `SPREADSHEET_ID` | [手順2でコピーしたID] |
+| `CALENDAR_ID` | [手順3でコピーしたID] |
+| `RECEPTION_URL` | （任意）予約完了後のURL |
+
+#### 5. GAS デプロイ
+- 「デプロイ」→「新しいデプロイ」
+- 「種類の選択」→「ウェブアプリ」
+- 設定:
+  - 説明: 本番環境
+  - 次のユーザーとして実行: 自分
+  - アクセスできるユーザー: **全員**
+- 「デプロイ」をクリック
+- 生成された「ウェブアプリのURL」をコピー
+  - 例: `https://script.google.com/macros/s/AKfyc.../exec`
 
 ---
 
-### オプションB: GitHub Pages + GAS API（推奨）
+### ステップ2: GitHub Pages セットアップ（30分）
 
-**所要時間:** 1時間
+#### 1. リポジトリのフォーク/クローン
+```bash
+# このリポジトリをフォーク後
+git clone https://github.com/[あなたのユーザー名]/tri-force-koenji-reservation.git
+cd tri-force-koenji-reservation
+```
 
-**メリット:**
-- フロントエンド更新が即座に反映
-- Git でバージョン管理
-- デザイン変更が容易
+#### 2. GAS URL の設定
+`pages/script.js` を開いて、9行目のURLを更新:
 
-**手順:**
+```javascript
+// 手順1-5で生成されたURLに置き換え
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+```
 
-1. **上記オプションAの手順1-5を実施**
+#### 3. 変更をコミット & プッシュ
+```bash
+git add pages/script.js
+git commit -m "設定: GAS Web App URLを更新"
+git push origin main
+```
 
-2. **GitHub リポジトリ作成**
-   ```bash
-   git clone https://github.com/[username]/tri-force-koenji-reservation.git
-   cd tri-force-koenji-reservation
-   ```
+#### 4. GitHub Pages 有効化
+- GitHubリポジトリのページを開く
+- 「Settings」→「Pages」
+- Source: `main` branch
+- Folder: `/pages`（重要！）
+- 「Save」をクリック
 
-3. **GAS Web App URL を設定**
-   - `pages/script.js` を開く
-   - `GAS_WEB_APP_URL` を生成されたURLに変更
+#### 5. アクセス確認
+数分後、以下のURLでアクセス可能になります:
+```
+https://[あなたのユーザー名].github.io/tri-force-koenji-reservation/
+```
 
-4. **GitHub Pages 有効化**
-   - GitHub リポジトリ設定
-   - Pages → Source: main branch / pages folder
-   - 保存
+---
 
-5. **アクセス**
-   - `https://[username].github.io/tri-force-koenji-reservation/`
+### ステップ3: 動作確認（5分）
 
-→ 完成！
+1. **フォームアクセス**
+   - GitHub Pages のURLを開く
+   - 予約フォームが表示されることを確認
+
+2. **テスト予約**
+   - 全項目を入力して送信
+   - 「予約が正常に受け付けられました」が表示されることを確認
+
+3. **データ確認**
+   - Google Spreadsheetを開く
+   - 新しい行にデータが追加されていることを確認
+   - Google Calendarを開く
+   - イベントが作成されていることを確認
+
+---
+
+### トラブルシューティング
+
+#### CORSエラーが出る場合
+- GASのデプロイ設定で「アクセスできるユーザー: 全員」になっているか確認
+- `code.gs` を再デプロイ（「デプロイを管理」→「編集」→「バージョン: 新しいバージョン」→「デプロイ」）
+
+#### データが保存されない場合
+- スクリプトプロパティが正しく設定されているか確認
+- GASのログを確認（「実行数」から確認可能）
+- シート名が「フォームの回答 2」になっているか確認
+
+#### GitHub Pagesが表示されない場合
+- 設定で `/pages` フォルダを指定しているか確認
+- 数分待ってから再度アクセス
+- ブラウザのキャッシュをクリア
 
 ---
 

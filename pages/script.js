@@ -127,22 +127,25 @@ async function handleSubmit(e) {
     }
     
     try {
-        // GASにPOST送信
+        // GASにPOST送信（CORS対応）
         const response = await fetch(GAS_WEB_APP_URL, {
             method: 'POST',
-            mode: 'no-cors', // CORS制限を回避
+            mode: 'cors', // CORSを有効化（GAS側で対応済み）
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Type': 'application/json',
             },
-            body: new URLSearchParams(formData)
+            body: JSON.stringify(formData)
         });
-        
-        // no-corsモードでは常に成功として扱う
-        showSuccess({
-            message: '予約を受け付けました',
-            reservationId: generateTempId()
-        });
-        resetForm();
+
+        // レスポンスを解析
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccess(result);
+            resetForm();
+        } else {
+            showError(result.message || '予約に失敗しました');
+        }
         
     } catch (error) {
         console.error('Error:', error);

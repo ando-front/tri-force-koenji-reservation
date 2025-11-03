@@ -22,65 +22,50 @@ const RECEPTION_URL =
   PropertiesService.getScriptProperties().getProperty('RECEPTION_URL');
 
 /**
- * Webアプリケーションとして予約フォームを表示します。
- */
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
-/**
- * フォーム送信時の処理を行います。
+ * フォーム送信時の処理を行います（GitHub Pages からのAPI リクエスト専用）
  * @param {Object} e - イベントオブジェクト
- * @return {ContentService} - 結果のテキスト出力
+ * @return {ContentService} - JSON レスポンス
  */
 function doPost(e) {
-  const formData = e.parameter;
+  // JSON ボディのパース
+  let formData;
+  try {
+    formData = JSON.parse(e.postData.contents);
+  } catch (error) {
+    // URL エンコード形式の場合のフォールバック
+    formData = e.parameter;
+  }
+
   Logger.log('フォームデータ: ' + JSON.stringify(formData));
 
   try {
-    // GitHub Pages からのリクエストかどうかを判定
-    const isApiRequest = e.parameter.apiRequest === 'true' || 
-                        e.postData && e.postData.type === 'application/x-www-form-urlencoded';
-    
-    if (isApiRequest) {
-      // API リクエストの場合はJSON レスポンスを返す
-      const result = processFormDataForApi(formData);
-      return ContentService
-        .createTextOutput(JSON.stringify(result))
-        .setMimeType(ContentService.MimeType.JSON)
-        .setHeaders({
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        });
-    } else {
-      // 従来のGAS Web App からのリクエストの場合
-      return processFormData(formData);
-    }
+    // 予約処理を実行
+    const result = processFormDataForApi(formData);
+
+    // JSON レスポンスを返す（CORS ヘッダー付き）
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      });
   } catch (error) {
     Logger.log('予約処理エラー: ' + error);
-    
-    // API リクエストの場合はJSON エラーレスポンス
-    if (e.parameter.apiRequest === 'true') {
-      return ContentService
-        .createTextOutput(JSON.stringify({
-          success: false,
-          message: 'サーバーエラーが発生しました: ' + error
-        }))
-        .setMimeType(ContentService.MimeType.JSON)
-        .setHeaders({
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        });
-    } else {
-      return showMessage(
-        '予約処理中にエラーが発生しました：' + error,
-        'deep-orange'
-      );
-    }
+
+    // エラーレスポンスを返す
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: false,
+        message: 'サーバーエラーが発生しました: ' + error
+      }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      });
   }
 }
 
