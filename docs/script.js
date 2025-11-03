@@ -86,27 +86,31 @@ function setupEventListeners() {
 function generateTimeOptions(date) {
     const startTimeSelect = document.getElementById('startTime');
     startTimeSelect.innerHTML = '<option value="" disabled selected>時間を選択</option>';
-    
-    let startTime = date ? new Date(date) : new Date();
-    startTime.setHours(7, 0, 0, 0);
-    
-    const endTime = new Date();
+
+    // 7:00から21:00まで30分刻みで生成
+    // ベース日付は今日または選択された日付を使用
+    const baseDate = date ? new Date(date) : new Date();
+
+    let currentTime = new Date(baseDate);
+    currentTime.setHours(7, 0, 0, 0);
+
+    const endTime = new Date(baseDate);
     endTime.setHours(21, 0, 0, 0);
-    
-    while (startTime <= endTime) {
-        const timeString = startTime.toLocaleTimeString('ja-JP', {
+
+    while (currentTime <= endTime) {
+        const timeString = currentTime.toLocaleTimeString('ja-JP', {
             hour: '2-digit',
             minute: '2-digit'
         });
-        
+
         const option = document.createElement('option');
         option.value = timeString;
         option.text = timeString;
         startTimeSelect.appendChild(option);
-        
-        startTime.setMinutes(startTime.getMinutes() + 30);
+
+        currentTime.setMinutes(currentTime.getMinutes() + 30);
     }
-    
+
     // Selectを再初期化
     M.FormSelect.init(startTimeSelect);
 }
