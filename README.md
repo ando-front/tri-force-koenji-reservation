@@ -56,7 +56,7 @@
 ```
 tri-force-koenji-reservation/
 │
-├── pages/                           # フロントエンド（推奨）
+├── docs/                            # フロントエンド（GitHub Pages用）
 │   ├── index.html                  # 予約フォームUI
 │   ├── script.js                   # クライアントロジック
 │   └── style.css                   # スタイリング
@@ -64,7 +64,7 @@ tri-force-koenji-reservation/
 ├── code.gs                          # バックエンド（GAS）
 ├── appsscript.json                  # GAS設定
 │
-├── docs/                            # 実用ドキュメント
+├── documentation/                   # 実用ドキュメント
 │   ├── 開発手順書.md                # セットアップ手順
 │   ├── 運用手順書.md                # 管理者向け運用ガイド
 │   └── GitHub Pages移行手順書.md    # デプロイ手順
@@ -161,7 +161,7 @@ cd tri-force-koenji-reservation
 ```
 
 #### 2. GAS URL の設定
-`pages/script.js` を開いて、9行目のURLを更新:
+`docs/script.js` を開いて、9行目のURLを更新:
 
 ```javascript
 // 手順1-5で生成されたURLに置き換え
@@ -170,7 +170,7 @@ const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'
 
 #### 3. 変更をコミット & プッシュ
 ```bash
-git add pages/script.js
+git add docs/script.js
 git commit -m "設定: GAS Web App URLを更新"
 git push origin main
 ```
@@ -179,7 +179,7 @@ git push origin main
 - GitHubリポジトリのページを開く
 - 「Settings」→「Pages」
 - Source: `main` branch
-- Folder: `/pages`（重要！）
+- Folder: `/docs`（重要！）
 - 「Save」をクリック
 
 #### 5. アクセス確認
@@ -220,7 +220,7 @@ https://[あなたのユーザー名].github.io/tri-force-koenji-reservation/
 - シート名が「フォームの回答 2」になっているか確認
 
 #### GitHub Pagesが表示されない場合
-- 設定で `/pages` フォルダを指定しているか確認
+- 設定で `/docs` フォルダを指定しているか確認
 - 数分待ってから再度アクセス
 - ブラウザのキャッシュをクリア
 
@@ -234,15 +234,15 @@ https://[あなたのユーザー名].github.io/tri-force-koenji-reservation/
 |------------|------|
 | [本番環境セットアップガイド.md](本番環境セットアップガイド.md) | 本番環境の構築手順（3時間） |
 | [非技術者向け_本番運用準備ガイド.md](非技術者向け_本番運用準備ガイド.md) | 平易な言葉での本番運用ガイド |
-| [docs/運用手順書.md](docs/運用手順書.md) | 日常の運用作業手順 |
+| [documentation/運用手順書.md](documentation/運用手順書.md) | 日常の運用作業手順 |
 
 ### 開発者向け
 
 | ドキュメント | 説明 |
 |------------|------|
 | [MVP定義書.md](MVP定義書.md) | MVPの定義、実装状況、ロードマップ |
-| [docs/開発手順書.md](docs/開発手順書.md) | 詳細なセットアップ手順 |
-| [docs/GitHub Pages移行手順書.md](docs/GitHub%20Pages移行手順書.md) | GitHub Pages デプロイ手順 |
+| [documentation/開発手順書.md](documentation/開発手順書.md) | 詳細なセットアップ手順 |
+| [documentation/GitHub Pages移行手順書.md](documentation/GitHub%20Pages移行手順書.md) | GitHub Pages デプロイ手順 |
 | [本番運用検討課題と解決案.md](本番運用検討課題と解決案.md) | 本番運用課題と技術的解決策 |
 | [Firebase移行手順書.md](Firebase移行手順書.md) | 将来のFirebase移行手順 |
 
