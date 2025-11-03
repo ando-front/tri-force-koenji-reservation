@@ -6,7 +6,7 @@
 // 2. 「新しいデプロイ」→「ウェブアプリ」→「全員がアクセス可能」で設定
 // 3. 生成されたURLを以下に設定
 // 例: 'https://script.google.com/macros/s/[YOUR_SCRIPT_ID]/exec'
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyjUmQrTpVqtiEWHk9OsBplx7gMy9bjHRqNMOsJAUvt9aWkvYVEP9GE7NNGYPNn8sQ/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyukK7d84aPMkDHQg-bShC4voFy2j3qOPv_cNuF4IB4aql8J78mT1MGybT2C-stUec/exec';
 
 let capacity = 4; // 初期値はフィットネス
 
