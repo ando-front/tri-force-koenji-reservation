@@ -77,6 +77,12 @@ export function AdminFacilityManagement() {
   const [maintenanceDateFrom, setMaintenanceDateFrom] = useState('');
   const [maintenanceDateTo, setMaintenanceDateTo] = useState('');
 
+  // 曜日別営業時間の一括設定用ステート
+  const [bulkWeekdays, setBulkWeekdays] = useState<number[]>([]);
+  const [bulkOpenHour, setBulkOpenHour] = useState(10);
+  const [bulkCloseHour, setBulkCloseHour] = useState(22);
+  const [bulkSlotDurationMinutes, setBulkSlotDurationMinutes] = useState<number | ''>('');
+
   const { data: facilities = [], isLoading, isError } = useQuery({
     queryKey: ['admin', 'facilities'],
     queryFn: adminListFacilities,
@@ -125,6 +131,42 @@ export function AdminFacilityManagement() {
     setMaintenanceDateInput('');
     setMaintenanceDateFrom('');
     setMaintenanceDateTo('');
+    setBulkWeekdays([]);
+    setBulkOpenHour(10);
+    setBulkCloseHour(22);
+    setBulkSlotDurationMinutes('');
+  }
+
+  function toggleBulkWeekday(weekday: number) {
+    setBulkWeekdays((current) =>
+      current.includes(weekday)
+        ? current.filter((w) => w !== weekday)
+        : [...current, weekday].sort((a, b) => a - b),
+    );
+  }
+
+  function applyBulkWeekdayHours() {
+    if (bulkWeekdays.length === 0) return;
+    setForm((current) => {
+      const existing = current.weekdayHours ?? [];
+      const updated = [...existing];
+      for (const weekday of bulkWeekdays) {
+        const entry: WeekdayHours = {
+          weekday,
+          openHour: bulkOpenHour,
+          closeHour: bulkCloseHour,
+          ...(bulkSlotDurationMinutes !== '' ? { slotDurationMinutes: bulkSlotDurationMinutes } : {}),
+        };
+        const idx = updated.findIndex((wh) => wh.weekday === weekday);
+        if (idx === -1) {
+          updated.push(entry);
+        } else {
+          updated[idx] = entry;
+        }
+      }
+      return { ...current, weekdayHours: updated.sort((a, b) => a.weekday - b.weekday) };
+    });
+    setBulkWeekdays([]);
   }
 
   function updateField<K extends keyof FacilityFormState>(key: K, value: FacilityFormState[K]) {
@@ -415,6 +457,71 @@ export function AdminFacilityManagement() {
             <div>
               <span className="form-label">曜日別営業時間（カスタム設定）</span>
               <p className="mb-2 text-xs text-gray-500">チェックを入れた曜日のみ個別の営業時間を設定できます。未設定の曜日はデフォルト営業時間を使用します。</p>
+
+              {/* 一括設定パネル */}
+              <div className="mb-3 rounded-md border border-brand-200 bg-brand-50/40 p-3">
+                <p className="mb-2 text-xs font-medium text-brand-700">複数曜日に同じ設定を一括適用</p>
+                <div className="mb-2 flex flex-wrap gap-3">
+                  {WEEKDAYS.map((weekday) => (
+                    <label key={weekday.value} className="flex items-center gap-1 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={bulkWeekdays.includes(weekday.value)}
+                        onChange={() => toggleBulkWeekday(weekday.value)}
+                        className="h-4 w-4"
+                      />
+                      <span>{weekday.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">開始</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={23}
+                      value={bulkOpenHour}
+                      onChange={(e) => setBulkOpenHour(Number(e.target.value))}
+                      className="form-input w-16 py-1 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">終了</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={24}
+                      value={bulkCloseHour}
+                      onChange={(e) => setBulkCloseHour(Number(e.target.value))}
+                      className="form-input w-16 py-1 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">枠(分)</span>
+                    <input
+                      type="number"
+                      min={15}
+                      step={15}
+                      placeholder={String(form.slotDurationMinutes)}
+                      value={bulkSlotDurationMinutes}
+                      onChange={(e) =>
+                        setBulkSlotDurationMinutes(e.target.value === '' ? '' : Number(e.target.value))
+                      }
+                      className="form-input w-20 py-1 text-sm"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={applyBulkWeekdayHours}
+                    disabled={bulkWeekdays.length === 0}
+                    className="btn-secondary whitespace-nowrap text-sm disabled:opacity-40"
+                  >
+                    選択曜日に一括適用
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-2 rounded-md border border-gray-200 p-3">
                 {WEEKDAYS.map((weekday) => {
                   const override = (form.weekdayHours ?? []).find((wh) => wh.weekday === weekday.value);
