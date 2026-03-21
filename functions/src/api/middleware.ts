@@ -1,0 +1,71 @@
+import { Request, Response, NextFunction } from 'express';
+import * as admin from 'firebase-admin';
+import * as repo from '../infra/firestoreRepository';
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    interface Request {
+      adminUid?: string;
+    }
+  }
+}
+
+/**
+ * Firebase Auth IDトークンを検証し、adminsコレクションに登録された
+ * 管理者のみ通す Express ミドルウェア。
+ */
+export async function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const authHeader = req.headers.authorization ?? '';
+  if (!authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: '認証が必要です' } });
+    return;
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const adminSnap = await admin
+      .firestore()
+      .collection('admins')
+      .doc(decoded.uid)
+      .get();
+
+    if (!adminSnap.exists) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: '管理者権限がありません' } });
+      return;
+    }
+
+    req.adminUid = decoded.uid;
+    next();
+  } catch {
+    res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: '認証トークンが無効です' } });
+  }
+}
+
+/** 管理者uidをアクター文字列として返す（未認証時は 'system'） */
+export function getActor(req: Request): string {
+  return req.adminUid ?? 'system';
+}
+
+/** 共通エラーハンドラ（Expressの4引数エラーハンドラ） */
+export function errorHandler(
+  err: unknown,
+  _req: Request,
+  res: Response,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _next: NextFunction
+): void {
+  const error = err as { code?: string; message?: string; status?: number };
+  const code    = error.code    ?? 'INTERNAL_ERROR';
+  const message = error.message ?? '予期せぬエラーが発生しました';
+  const status  = error.status  ?? 500;
+
+  console.error('[error]', code, message);
+  repo; // suppress unused import
+  res.status(status).json({ success: false, error: { code, message } });
+}

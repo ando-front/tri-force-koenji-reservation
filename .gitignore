@@ -1,7 +1,29 @@
-node_modules
+# 依存パッケージ
+node_modules/
+
+# ビルド成果物
 dist/
 build/
-.DS_Store
+functions/lib/
+
+# ローカル環境変数（.env.example はコミット可）
+.env
+.env.local
+.env.*.local
+
+# Firebase ローカルキャッシュ・認証情報
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+database-debug.log
+
+# GAS 設定
 .clasp*.json
-*.tgz
+
+# macOS
+.DS_Store
+
+# エディタ
 .vscode/
+*.tgz

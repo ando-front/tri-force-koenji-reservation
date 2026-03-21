@@ -1,0 +1,82 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+# main ブランチへのプッシュが複数重なった場合、先行ジョブをキャンセルして最新のみデプロイ
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & Deploy to Firebase
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Node.js セットアップ ─────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            functions/package-lock.json
+            frontend/package-lock.json
+
+      # ── Functions ビルド ──────────────────────────────────────────────────
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm ci
+
+      - name: Build Functions
+        working-directory: functions
+        run: npm run build
+
+      # ── Frontend ビルド ───────────────────────────────────────────────────
+      - name: Install Frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: frontend
+        env:
+          VITE_FIREBASE_API_KEY:             ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN:         ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID:          ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET:      ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID:              ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FUNCTIONS_BASE_URL:           ${{ secrets.VITE_FUNCTIONS_BASE_URL }}
+          VITE_USE_EMULATORS:                'false'
+        run: npm run build
+
+      # ── Firebase デプロイ ─────────────────────────────────────────────────
+      - name: Deploy to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken:        ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId:        live
+          projectId:        tri-force-koenji-reservation
+          # Functions + Hosting をまとめてデプロイ
+          target:           hosting
+        env:
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
+
+      # action-hosting-deploy は Hosting のみのため、Functions は CLI で追加デプロイ
+      - name: Deploy Functions
+        run: |
+          npm install -g firebase-tools
+          firebase deploy --only functions \
+            --project tri-force-koenji-reservation \
+            --token "${{ secrets.FIREBASE_CI_TOKEN }}"
+        env:
+          RESEND_API_KEY:    ${{ secrets.RESEND_API_KEY }}
+          ADMIN_MAIL_BCC:    ${{ secrets.ADMIN_MAIL_BCC }}
+          MAIL_FROM:         ${{ secrets.MAIL_FROM }}
+          ALLOWED_ORIGINS:   ${{ secrets.ALLOWED_ORIGINS }}

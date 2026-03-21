@@ -1,0 +1,37 @@
+query AllProducts @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  products {
+    id
+    name
+    description
+    price
+  }
+}
+
+query MyOrders @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  orders(where: { customerUid: { eq_expr: "auth.uid" } }) {
+    id
+    totalAmount
+    status
+    items {
+      product {
+        name
+      }
+      quantity
+    }
+  }
+}
+
+mutation CreateProduct($name: String!, $description: String!, $price: Float!) @auth(expr: "auth.token.admin == true") {
+  product_insert(data: { name: $name, description: $description, price: $price })
+}
+
+mutation PlaceOrder($items: [OrderItemInput!]!) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  order: order_insert(data: {
+    customerUid_expr: "auth.uid",
+    totalAmount: 0.0, # This will be calculated on the backend
+    status: "PENDING",
+    items: {
+      create: $items
+    }
+  })
+}

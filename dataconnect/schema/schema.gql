@@ -1,0 +1,33 @@
+type User @table {
+  email: String!
+  displayName: String!
+  createdAt: Timestamp!
+  phoneNumber: String
+  photoUrl: String
+}
+
+type ResourceType @table {
+  name: String!
+  createdAt: Timestamp!
+  description: String
+}
+
+type Resource @table {
+  name: String!
+  type: ResourceType!
+  capacity: Int!
+  createdAt: Timestamp!
+  description: String
+  location: String
+  imageUrl: String
+}
+
+type Reservation @table {
+  user: User!
+  resource: Resource!
+  startTime: Timestamp!
+  endTime: Timestamp!
+  status: String!
+  createdAt: Timestamp!
+  notes: String
+}
