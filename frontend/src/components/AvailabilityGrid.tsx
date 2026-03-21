@@ -77,7 +77,7 @@ export function AvailabilityGrid({ facilityId, date, selectedSlot, onSelectSlot 
           );
         })}
       </div>
-      <p className="mt-3 text-xs text-gray-500">各時間帯には予約者名を公開表示しています。満員枠は選択できません。</p>
+      <p className="mt-3 text-xs text-gray-500">各時間帯には入力されたニックネーム、未入力時は「会員1」形式の表示名を公開します。満員枠は選択できません。</p>
     </div>
   );
 }

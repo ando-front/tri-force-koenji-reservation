@@ -53,7 +53,7 @@ export function ReservationPage() {
         {step === 'select' && (
           <div className="card space-y-8">
             <div className="rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-800">
-              予約状況には予約者名が表示されます。利用前に
+              予約状況にはニックネーム、未入力時は「会員1」形式の表示名が表示されます。利用前に
               <Link to="/guide" className="ml-1 font-medium underline underline-offset-2">
                 利用案内と留意事項
               </Link>

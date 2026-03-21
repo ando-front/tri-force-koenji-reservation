@@ -9,6 +9,7 @@ import {
   adminDeleteReservation,
   fetchFacilities,
 } from '@/lib/api';
+import { formatReservationDisplayName } from '@/lib/reservationDisplay';
 import type { Reservation, Facility, ListReservationsQuery } from '@/types';
 
 // ---- ステータス表示ヘルパー --------------------------------------------------
@@ -222,7 +223,7 @@ export function AdminReservationList() {
                           to={`/admin/reservations/${r.reservationId}`}
                           className="text-brand-600 hover:underline"
                         >
-                          {r.memberName}
+                          {formatReservationDisplayName(r.memberName)}
                         </Link>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">{r.date}</td>

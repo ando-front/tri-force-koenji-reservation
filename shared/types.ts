@@ -117,7 +117,7 @@ export interface AuditLog {
 
 /** POST /reservations リクエストボディのスキーマ */
 export const CreateReservationSchema = z.object({
-  memberName:   z.string().min(1, 'お名前は必須です').max(50, '50文字以内で入力してください'),
+  memberName:   z.string().trim().max(50, '50文字以内で入力してください').optional().default(''),
   email:        z.string().email('正しいメールアドレスを入力してください'),
   facilityId:   z.string().min(1, '施設を選択してください'),
   date: z

@@ -4,6 +4,10 @@ import { Reservation } from '../../../shared/types';
 const FROM_ADDRESS = process.env.MAIL_FROM ?? 'noreply@tri-force-koenji.jp';
 const ADMIN_BCC    = process.env.ADMIN_MAIL_BCC ?? '';
 
+function getReservationMailName(memberName: string): string {
+  return memberName.trim() || '会員';
+}
+
 /** 予約確認メールを送信する（失敗しても例外を投げない） */
 export async function sendReservationConfirmation(reservation: Reservation): Promise<void> {
   try {
@@ -32,7 +36,7 @@ export async function sendReservationConfirmation(reservation: Reservation): Pro
 
 function buildConfirmationText(r: Reservation): string {
   return [
-    `${r.memberName} 様`,
+    `${getReservationMailName(r.memberName)} 様`,
     '',
     '以下の内容で施設予約を受け付けました。',
     '',

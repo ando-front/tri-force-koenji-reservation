@@ -238,6 +238,7 @@ export async function getReservationSummaryBySlot(
     .get();
 
   const counts = new Map<string, { currentCount: number; reservedNames: string[] }>();
+  const anonymousCounts = new Map<string, number>();
   for (const doc of snap.docs) {
     const data = doc.data();
     const startTime = data.startTime as string;
@@ -245,6 +246,10 @@ export async function getReservationSummaryBySlot(
     current.currentCount += 1;
     if (typeof data.memberName === 'string' && data.memberName.trim()) {
       current.reservedNames.push(data.memberName.trim());
+    } else {
+      const nextAnonymousIndex = (anonymousCounts.get(startTime) ?? 0) + 1;
+      anonymousCounts.set(startTime, nextAnonymousIndex);
+      current.reservedNames.push(`会員${nextAnonymousIndex}`);
     }
     counts.set(startTime, current);
   }

@@ -5,6 +5,7 @@ import {
   adminUpdateReservationStatus,
   adminDeleteReservation,
 } from '@/lib/api';
+import { formatReservationDisplayName } from '@/lib/reservationDisplay';
 
 const STATUS_LABEL: Record<string, string> = {
   pending:   '仮受付',
@@ -107,7 +108,7 @@ export function AdminReservationDetail() {
           {/* 詳細 */}
           <dl className="divide-y divide-gray-100 text-sm">
             {[
-              ['氏名',           reservation.memberName],
+              ['表示名',         formatReservationDisplayName(reservation.memberName)],
               ['メールアドレス', reservation.email],
               ['日付',           reservation.date],
               ['時間',           `${reservation.startTime} 〜 ${reservation.endTime}`],

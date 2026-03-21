@@ -46,16 +46,19 @@ export function ReservationForm({ facilityId, date, startTime }: Props) {
       {/* 氏名 */}
       <div>
         <label htmlFor="memberName" className="form-label">
-          氏名 <span className="text-red-500">*</span>
+          ニックネーム（任意）
         </label>
         <input
           id="memberName"
           type="text"
           autoComplete="name"
-          placeholder="例：山田 太郎"
+          placeholder="例：ケンジ、Aさん"
           className="form-input"
           {...register('memberName')}
         />
+        <p className="mt-1 text-xs text-gray-500">
+          未入力の場合は予約状況に「会員1」「会員2」などで表示されます。
+        </p>
         {errors.memberName && (
           <p className="form-error">{errors.memberName.message}</p>
         )}

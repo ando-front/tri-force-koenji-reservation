@@ -70,7 +70,7 @@ router.post('/', async (req: Request, res: Response) => {
   // 定員チェック付き予約登録（トランザクション）
   try {
     const reservation = await createReservation({
-      memberName:   input.memberName,
+      memberName:   input.memberName.trim(),
       email:        input.email,
       facilityId:   input.facilityId,
       facilityName: facility.name,
