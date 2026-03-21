@@ -46,6 +46,43 @@
   //     ]
   //   },
   // ]
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "reservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "mode": "ASCENDING" },
+        { "fieldPath": "startTime", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "facilityId", "mode": "ASCENDING" },
+        { "fieldPath": "date", "mode": "ASCENDING" },
+        { "fieldPath": "startTime", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "mode": "ASCENDING" },
+        { "fieldPath": "date", "mode": "ASCENDING" },
+        { "fieldPath": "startTime", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "facilityId", "mode": "ASCENDING" },
+        { "fieldPath": "status", "mode": "ASCENDING" },
+        { "fieldPath": "date", "mode": "ASCENDING" },
+        { "fieldPath": "startTime", "mode": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
