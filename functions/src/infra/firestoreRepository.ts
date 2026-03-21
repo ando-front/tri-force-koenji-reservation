@@ -21,7 +21,6 @@ export async function listFacilities(): Promise<Facility[]> {
   const snap = await db()
     .collection('facilities')
     .where('isActive', '==', true)
-    .orderBy('name')
     .get();
   return snap.docs.map((d) => ({ facilityId: d.id, ...d.data() } as Facility));
 }
