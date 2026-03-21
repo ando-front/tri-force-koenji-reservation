@@ -24,6 +24,8 @@ function mapLoginError(error: unknown): string {
   }
 
   switch (error.code) {
+    case 'auth/configuration-not-found':
+      return 'Firebase Authentication の Google ログイン設定が未構成です。Authentication > Sign-in method で Google を有効化してください。';
     case 'auth/popup-closed-by-user':
       return 'ログイン用ポップアップが閉じられました。';
     case 'auth/popup-blocked':
