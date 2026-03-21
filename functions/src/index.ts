@@ -51,6 +51,7 @@ export const api = functions.onRequest(
     maxInstances: 10,                // DDoS対策・コスト上限
     memory:       '256MiB',
     timeoutSeconds: 30,
+    invoker:      'public',
   },
   app
 );
