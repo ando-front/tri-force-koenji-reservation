@@ -8,6 +8,12 @@ import type {
 } from '@shared/types';
 
 const BASE_URL = (import.meta.env.VITE_FUNCTIONS_BASE_URL as string) ?? '';
+const PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined;
+
+function directFunctionsBaseUrl(): string | null {
+  if (!PROJECT_ID) return null;
+  return `https://asia-northeast1-${PROJECT_ID}.cloudfunctions.net/api`;
+}
 
 // ---- helpers ---------------------------------------------------------------
 
@@ -44,13 +50,26 @@ async function request<T>(
 
 /** 施設一覧を取得 */
 export async function fetchFacilities(): Promise<Facility[]> {
-  const response = await request<Facility[] | { facilities?: Facility[] }>('/facilities');
+  const normalize = (response: Facility[] | { facilities?: Facility[] }): Facility[] => {
+    // Backward compatibility: accept both array and wrapped payload formats.
+    if (Array.isArray(response)) return response;
+    if (response && Array.isArray(response.facilities)) return response.facilities;
+    return [];
+  };
 
-  // Backward compatibility: accept both array and wrapped payload formats.
-  if (Array.isArray(response)) return response;
-  if (response && Array.isArray(response.facilities)) return response.facilities;
+  try {
+    const response = await request<Facility[] | { facilities?: Facility[] }>('/facilities');
+    return normalize(response);
+  } catch {
+    // Fallback to direct Functions URL in case BASE_URL is missing/misconfigured.
+    const fallbackBase = directFunctionsBaseUrl();
+    if (!fallbackBase) throw new Error('施設一覧 API の URL を解決できませんでした');
 
-  return [];
+    const res = await fetch(`${fallbackBase}/facilities`);
+    if (!res.ok) throw new Error('施設一覧 API の取得に失敗しました');
+    const body = (await res.json()) as Facility[] | { facilities?: Facility[] };
+    return normalize(body);
+  }
 }
 
 /** 空き状況を取得 */
