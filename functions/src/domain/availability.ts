@@ -1,8 +1,27 @@
-import { Facility, AvailabilitySlot } from '../../../shared/types';
+import { Facility, AvailabilitySlot, WeekdayHours } from '../../../shared/types';
 
 export function isFacilityUnavailableOnDate(facility: Facility, date: string): boolean {
   const weekday = new Date(date + 'T00:00:00').getDay();
   return facility.closedWeekdays.includes(weekday) || facility.maintenanceDates.includes(date);
+}
+
+/**
+ * 指定日の曜日に対応する営業時間を返す。
+ * weekdayHours に対象曜日の設定があればそれを使い、なければ施設のデフォルトを返す。
+ */
+export function getHoursForDate(
+  facility: Facility,
+  date: string,
+): { openHour: number; closeHour: number; slotDurationMinutes: number } {
+  const weekday = new Date(date + 'T00:00:00').getDay();
+  const override: WeekdayHours | undefined = (facility.weekdayHours ?? []).find(
+    (wh) => wh.weekday === weekday,
+  );
+  return {
+    openHour: override?.openHour ?? facility.openHour,
+    closeHour: override?.closeHour ?? facility.closeHour,
+    slotDurationMinutes: override?.slotDurationMinutes ?? facility.slotDurationMinutes,
+  };
 }
 
 /**
@@ -11,9 +30,10 @@ export function isFacilityUnavailableOnDate(facility: Facility, date: string): b
  */
 export function generateSlots(facility: Facility, date: string): Omit<AvailabilitySlot, 'available' | 'currentCount'>[] {
   const slots: Omit<AvailabilitySlot, 'available' | 'currentCount'>[] = [];
-  const { openHour, closeHour, slotDurationMinutes } = facility;
 
   if (isFacilityUnavailableOnDate(facility, date)) return [];
+
+  const { openHour, closeHour, slotDurationMinutes } = getHoursForDate(facility, date);
 
   const totalMinutes = (closeHour - openHour) * 60;
   const slotCount = Math.floor(totalMinutes / slotDurationMinutes);
@@ -35,10 +55,11 @@ export function generateSlots(facility: Facility, date: string): Omit<Availabili
 export function isWithinOperatingHours(facility: Facility, date: string, startTime: string): boolean {
   if (isFacilityUnavailableOnDate(facility, date)) return false;
 
+  const { openHour, closeHour, slotDurationMinutes } = getHoursForDate(facility, date);
   const startMin = hhmmToMinutes(startTime);
-  const endMin = startMin + facility.slotDurationMinutes;
-  const openMin  = facility.openHour  * 60;
-  const closeMin = facility.closeHour * 60;
+  const endMin = startMin + slotDurationMinutes;
+  const openMin  = openHour  * 60;
+  const closeMin = closeHour * 60;
   return startMin >= openMin && endMin <= closeMin;
 }
 
