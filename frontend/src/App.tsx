@@ -7,6 +7,7 @@ import { AdminLoginPage }        from '@/pages/admin/AdminLoginPage';
 import { AdminReservationList }  from '@/pages/admin/AdminReservationList';
 import { AdminReservationDetail } from '@/pages/admin/AdminReservationDetail';
 import { AdminFacilityManagement } from '@/pages/admin/AdminFacilityManagement';
+import { AdminOperationsManualPage } from '@/pages/admin/AdminOperationsManualPage';
 import { RequireAdmin }          from '@/components/RequireAdmin';
 
 export default function App() {
@@ -42,6 +43,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <AdminFacilityManagement />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/manual"
+            element={
+              <RequireAdmin>
+                <AdminOperationsManualPage />
               </RequireAdmin>
             }
           />

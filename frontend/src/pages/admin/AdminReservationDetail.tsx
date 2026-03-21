@@ -85,6 +85,9 @@ export function AdminReservationDetail() {
           <Link to="/admin" className="text-sm text-brand-600 hover:underline">
             ← 一覧に戻る
           </Link>
+          <Link to="/admin/manual" className="text-sm text-brand-600 hover:underline">
+            操作マニュアル
+          </Link>
           <h1 className="text-lg font-bold text-gray-900">予約詳細</h1>
         </div>
       </header>

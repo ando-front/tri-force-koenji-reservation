@@ -119,6 +119,9 @@ export function AdminReservationList() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-bold text-gray-900">予約管理</h1>
+            <Link to="/admin/manual" className="text-sm text-brand-600 hover:underline">
+              操作マニュアル
+            </Link>
             <Link to="/admin/facilities" className="text-sm text-brand-600 hover:underline">
               施設管理へ
             </Link>
@@ -133,6 +136,20 @@ export function AdminReservationList() {
       </header>
 
       <div className="mx-auto max-w-6xl px-4 py-6 space-y-4">
+        <div className="card border border-brand-100 bg-brand-50/40">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">管理者向けクイックガイド</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                仮受付は「確定」、利用中止は「キャンセル」、誤登録のみ「削除」を使います。施設の休館設定や公開停止は施設管理から操作してください。
+              </p>
+            </div>
+            <Link to="/admin/manual" className="btn-secondary text-sm text-center">
+              詳細マニュアルを見る
+            </Link>
+          </div>
+        </div>
+
         {/* フィルター */}
         <div className="card flex flex-wrap gap-3">
           {/* 施設 */}
