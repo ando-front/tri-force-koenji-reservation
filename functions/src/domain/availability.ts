@@ -1,16 +1,19 @@
 import { Facility, AvailabilitySlot } from '../../../shared/types';
 
+export function isFacilityUnavailableOnDate(facility: Facility, date: string): boolean {
+  const weekday = new Date(date + 'T00:00:00').getDay();
+  return facility.closedWeekdays.includes(weekday) || facility.maintenanceDates.includes(date);
+}
+
 /**
  * 施設の営業時間をスロット配列に展開する
  * 各スロットの available / currentCount は呼び出し元が埋める
  */
 export function generateSlots(facility: Facility, date: string): Omit<AvailabilitySlot, 'available' | 'currentCount'>[] {
   const slots: Omit<AvailabilitySlot, 'available' | 'currentCount'>[] = [];
-  const { openHour, closeHour, slotDurationMinutes, closedWeekdays } = facility;
+  const { openHour, closeHour, slotDurationMinutes } = facility;
 
-  // 定休日チェック
-  const weekday = new Date(date + 'T00:00:00').getDay();
-  if (closedWeekdays.includes(weekday)) return [];
+  if (isFacilityUnavailableOnDate(facility, date)) return [];
 
   const totalMinutes = (closeHour - openHour) * 60;
   const slotCount = Math.floor(totalMinutes / slotDurationMinutes);
@@ -22,6 +25,7 @@ export function generateSlots(facility: Facility, date: string): Omit<Availabili
       startTime: minutesToHHMM(startMin),
       endTime:   minutesToHHMM(endMin),
       capacity:  facility.capacity,
+      reservedNames: [],
     });
   }
   return slots;
@@ -29,8 +33,7 @@ export function generateSlots(facility: Facility, date: string): Omit<Availabili
 
 /** HH:MM 文字列が施設の営業時間内かチェック */
 export function isWithinOperatingHours(facility: Facility, date: string, startTime: string): boolean {
-  const weekday = new Date(date + 'T00:00:00').getDay();
-  if (facility.closedWeekdays.includes(weekday)) return false;
+  if (isFacilityUnavailableOnDate(facility, date)) return false;
 
   const startMin = hhmmToMinutes(startTime);
   const endMin = startMin + facility.slotDurationMinutes;

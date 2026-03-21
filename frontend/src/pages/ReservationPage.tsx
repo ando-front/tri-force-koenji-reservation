@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FacilitySelector }  from '@/components/FacilitySelector';
 import { AvailabilityGrid }  from '@/components/AvailabilityGrid';
 import { ReservationForm }   from '@/components/ReservationForm';
@@ -42,10 +43,23 @@ export function ReservationPage() {
           <p className="mt-1 text-sm text-gray-500">
             トライフォース高円寺
           </p>
+          <div className="mt-3 flex justify-center gap-4 text-sm">
+            <Link to="/guide" className="text-brand-600 hover:underline">
+              利用案内・留意事項
+            </Link>
+          </div>
         </header>
 
         {step === 'select' && (
           <div className="card space-y-8">
+            <div className="rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-800">
+              予約状況には予約者名が表示されます。利用前に
+              <Link to="/guide" className="ml-1 font-medium underline underline-offset-2">
+                利用案内と留意事項
+              </Link>
+              を確認してください。
+            </div>
+
             {/* 施設選択 */}
             <FacilitySelector value={facilityId} onChange={setFacilityId} />
 

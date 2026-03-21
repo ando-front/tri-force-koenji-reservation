@@ -1,5 +1,7 @@
 export type {
   Facility,
+  CreateFacilityInput,
+  UpdateFacilityInput,
   Reservation,
   Admin,
   AuditLog,
@@ -10,4 +12,4 @@ export type {
   ListReservationsQuery,
 } from '@shared/types';
 
-export { CreateReservationSchema, UpdateStatusSchema } from '@shared/types';
+export { CreateReservationSchema, UpdateStatusSchema, FacilityFormSchema } from '@shared/types';

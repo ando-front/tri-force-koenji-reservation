@@ -1,6 +1,8 @@
 import * as admin from 'firebase-admin';
 import {
   Facility,
+  CreateFacilityInput,
+  UpdateFacilityInput,
   Reservation,
   ReservationStatus,
   AuditAction,
@@ -9,12 +11,37 @@ import {
 
 const db = () => admin.firestore();
 
+function normalizeDateList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((item): item is string => typeof item === 'string'))].sort();
+}
+
+function normalizeFacility(docId: string, data: Record<string, unknown>): Facility {
+  const nowFallback = null;
+
+  return {
+    facilityId: data.facilityId as string ?? docId,
+    name: data.name as string ?? docId,
+    capacity: Number(data.capacity ?? 1),
+    openHour: Number(data.openHour ?? 10),
+    closeHour: Number(data.closeHour ?? 22),
+    slotDurationMinutes: Number(data.slotDurationMinutes ?? 60),
+    closedWeekdays: Array.isArray(data.closedWeekdays)
+      ? data.closedWeekdays.map((value) => Number(value))
+      : [],
+    maintenanceDates: normalizeDateList(data.maintenanceDates),
+    isActive: Boolean(data.isActive ?? true),
+    createdAt: data.createdAt ?? nowFallback,
+    updatedAt: data.updatedAt ?? nowFallback,
+  };
+}
+
 // ─── 施設 ─────────────────────────────────────────────────────────────────────
 
 export async function getFacility(facilityId: string): Promise<Facility | null> {
   const snap = await db().collection('facilities').doc(facilityId).get();
   if (!snap.exists) return null;
-  return { facilityId: snap.id, ...snap.data() } as Facility;
+  return normalizeFacility(snap.id, snap.data() ?? {});
 }
 
 export async function listFacilities(): Promise<Facility[]> {
@@ -22,7 +49,56 @@ export async function listFacilities(): Promise<Facility[]> {
     .collection('facilities')
     .where('isActive', '==', true)
     .get();
-  return snap.docs.map((d) => ({ facilityId: d.id, ...d.data() } as Facility));
+  return snap.docs
+    .map((d) => normalizeFacility(d.id, d.data()))
+    .sort((left, right) => left.name.localeCompare(right.name, 'ja'));
+}
+
+export async function listFacilitiesAdmin(): Promise<Facility[]> {
+  const snap = await db().collection('facilities').get();
+  return snap.docs
+    .map((d) => normalizeFacility(d.id, d.data()))
+    .sort((left, right) => left.name.localeCompare(right.name, 'ja'));
+}
+
+export async function createFacility(input: CreateFacilityInput): Promise<Facility> {
+  const ref = db().collection('facilities').doc(input.facilityId);
+  const existing = await ref.get();
+  if (existing.exists) {
+    throw Object.assign(new Error('ALREADY_EXISTS'), { code: 'ALREADY_EXISTS' });
+  }
+
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  await ref.set({
+    ...input,
+    maintenanceDates: normalizeDateList(input.maintenanceDates),
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const saved = await ref.get();
+  return normalizeFacility(saved.id, saved.data() ?? {});
+}
+
+export async function updateFacility(
+  facilityId: string,
+  input: UpdateFacilityInput
+): Promise<Facility> {
+  const ref = db().collection('facilities').doc(facilityId);
+  const existing = await ref.get();
+  if (!existing.exists) {
+    throw Object.assign(new Error('NOT_FOUND'), { code: 'NOT_FOUND' });
+  }
+
+  await ref.set({
+    ...input,
+    facilityId,
+    maintenanceDates: normalizeDateList(input.maintenanceDates),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  const updated = await ref.get();
+  return normalizeFacility(updated.id, updated.data() ?? {});
 }
 
 // ─── 予約 ─────────────────────────────────────────────────────────────────────
@@ -149,11 +225,11 @@ export async function listReservations(
   return { reservations, nextCursor };
 }
 
-/** 指定施設・日付の予約件数をスロット単位で取得する */
-export async function getReservationCountsBySlot(
+/** 指定施設・日付の予約状況をスロット単位で取得する */
+export async function getReservationSummaryBySlot(
   facilityId: string,
   date: string
-): Promise<Map<string, number>> {
+): Promise<Map<string, { currentCount: number; reservedNames: string[] }>> {
   const snap = await db()
     .collection('reservations')
     .where('facilityId', '==', facilityId)
@@ -161,10 +237,16 @@ export async function getReservationCountsBySlot(
     .where('status', 'in', ['pending', 'confirmed'])
     .get();
 
-  const counts = new Map<string, number>();
+  const counts = new Map<string, { currentCount: number; reservedNames: string[] }>();
   for (const doc of snap.docs) {
-    const st: string = doc.data().startTime;
-    counts.set(st, (counts.get(st) ?? 0) + 1);
+    const data = doc.data();
+    const startTime = data.startTime as string;
+    const current = counts.get(startTime) ?? { currentCount: 0, reservedNames: [] };
+    current.currentCount += 1;
+    if (typeof data.memberName === 'string' && data.memberName.trim()) {
+      current.reservedNames.push(data.memberName.trim());
+    }
+    counts.set(startTime, current);
   }
   return counts;
 }

@@ -9,6 +9,7 @@ const baseFacility: Facility = {
   closeHour:           21,
   slotDurationMinutes: 60,
   closedWeekdays:      [0], // 日曜定休
+  maintenanceDates:    ['2026-03-24'],
   isActive:            true,
   createdAt:           null,
   updatedAt:           null,
@@ -28,6 +29,11 @@ describe('generateSlots', () => {
     const slots = generateSlots(baseFacility, '2026-03-22'); // 日曜
     expect(slots).toHaveLength(0);
   });
+
+  it('メンテナンス日は空配列を返す', () => {
+    const slots = generateSlots(baseFacility, '2026-03-24');
+    expect(slots).toHaveLength(0);
+  });
 });
 
 describe('isWithinOperatingHours', () => {
@@ -43,6 +49,10 @@ describe('isWithinOperatingHours', () => {
 
   it('定休日なら false を返す', () => {
     expect(isWithinOperatingHours(baseFacility, '2026-03-22', '10:00')).toBe(false);
+  });
+
+  it('メンテナンス日なら false を返す', () => {
+    expect(isWithinOperatingHours(baseFacility, '2026-03-24', '10:00')).toBe(false);
   });
 });
 

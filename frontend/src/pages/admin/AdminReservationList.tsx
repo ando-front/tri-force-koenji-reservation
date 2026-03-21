@@ -116,7 +116,12 @@ export function AdminReservationList() {
       {/* ヘッダー */}
       <header className="bg-white shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <h1 className="text-lg font-bold text-gray-900">予約管理</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-bold text-gray-900">予約管理</h1>
+            <Link to="/admin/facilities" className="text-sm text-brand-600 hover:underline">
+              施設管理へ
+            </Link>
+          </div>
           <button
             onClick={() => signOut(auth)}
             className="btn-secondary text-xs"

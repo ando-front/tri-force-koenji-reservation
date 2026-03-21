@@ -10,7 +10,8 @@
     "serve":    "npm run build && firebase emulators:start --only functions",
     "lint":     "eslint --ext .ts src/",
     "test":     "jest --config jest.config.js",
-    "deploy":   "firebase deploy --only functions"
+    "deploy":   "firebase deploy --only functions",
+    "seed:facilities": "npm run build && node lib/functions/src/scripts/seedFacilities.js"
   },
   "dependencies": {
     "cors":              "^2.8.5",

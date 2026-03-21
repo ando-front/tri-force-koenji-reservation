@@ -27,3 +27,4 @@ database-debug.log
 # エディタ
 .vscode/
 *.tgz
+tri-force-koenji-reservation-firebase-adminsdk*.json

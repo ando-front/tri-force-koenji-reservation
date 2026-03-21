@@ -17,10 +17,49 @@ export interface Facility {
   closeHour: number;
   slotDurationMinutes: number;
   closedWeekdays: number[]; // 0=日〜6=土
+  maintenanceDates: string[];
   isActive: boolean;
   createdAt: unknown; // Firestore Timestamp
   updatedAt: unknown;
 }
+
+const DateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付は YYYY-MM-DD 形式で入力してください');
+
+const FacilityFormBaseSchema = z.object({
+  facilityId: z
+    .string()
+    .min(1, '施設IDは必須です')
+    .max(50, '施設IDは50文字以内で入力してください')
+    .regex(/^[a-z0-9-]+$/, '施設IDは半角英小文字・数字・ハイフンのみ使えます'),
+  name: z.string().min(1, '施設名は必須です').max(100, '施設名は100文字以内で入力してください'),
+  capacity: z.number().int().min(1, '定員は1以上で入力してください').max(500, '定員が大きすぎます'),
+  openHour: z.number().int().min(0, '開始時刻が不正です').max(23, '開始時刻が不正です'),
+  closeHour: z.number().int().min(1, '終了時刻が不正です').max(24, '終了時刻が不正です'),
+  slotDurationMinutes: z
+    .number()
+    .int()
+    .min(15, '枠時間は15分以上で入力してください')
+    .max(180, '枠時間は180分以下で入力してください'),
+  closedWeekdays: z.array(z.number().int().min(0).max(6)).default([]),
+  maintenanceDates: z.array(DateStringSchema).default([]),
+  isActive: z.boolean().default(true),
+});
+
+export const FacilityFormSchema = FacilityFormBaseSchema.refine((value) => value.closeHour > value.openHour, {
+  message: '終了時刻は開始時刻より後にしてください',
+  path: ['closeHour'],
+});
+
+export const CreateFacilitySchema = FacilityFormSchema;
+export type CreateFacilityInput = z.infer<typeof CreateFacilitySchema>;
+
+export const UpdateFacilitySchema = FacilityFormBaseSchema
+  .omit({ facilityId: true })
+  .refine((value) => value.closeHour > value.openHour, {
+    message: '終了時刻は開始時刻より後にしてください',
+    path: ['closeHour'],
+  });
+export type UpdateFacilityInput = z.infer<typeof UpdateFacilitySchema>;
 
 // ─── 予約ステータス ───────────────────────────────────────────────────────────
 
@@ -123,6 +162,7 @@ export interface AvailabilitySlot {
   available: boolean;
   currentCount: number;
   capacity: number;
+  reservedNames: string[];
 }
 
 /** GET /availability レスポンス */

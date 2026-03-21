@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getFacility, getReservationCountsBySlot } from '../infra/firestoreRepository';
+import { getFacility, getReservationSummaryBySlot } from '../infra/firestoreRepository';
 import { generateSlots } from '../domain/availability';
 import { AvailabilitySlot } from '../../../shared/types';
 
@@ -27,18 +27,23 @@ router.get('/', async (req: Request, res: Response) => {
   }
 
   const slotTemplates = generateSlots(facility, date);
-  const counts        = await getReservationCountsBySlot(facilityId, date);
+  const counts        = await getReservationSummaryBySlot(facilityId, date);
   const now           = new Date();
   const todayStr      = now.toISOString().split('T')[0];
   const nowMin        = now.getHours() * 60 + now.getMinutes();
 
   const slots: AvailabilitySlot[] = slotTemplates.map((s) => {
-    const count       = counts.get(s.startTime) ?? 0;
+    const summary     = counts.get(s.startTime) ?? { currentCount: 0, reservedNames: [] };
     const [h, m]      = s.startTime.split(':').map(Number);
     const slotMin     = h * 60 + m;
     const isPast      = date < todayStr || (date === todayStr && slotMin <= nowMin);
-    const available   = !isPast && count < s.capacity;
-    return { ...s, currentCount: count, available };
+    const available   = !isPast && summary.currentCount < s.capacity;
+    return {
+      ...s,
+      currentCount: summary.currentCount,
+      reservedNames: summary.reservedNames,
+      available,
+    };
   });
 
   res.json({

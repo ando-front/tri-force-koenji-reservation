@@ -2,9 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ReservationPage }       from '@/pages/ReservationPage';
 import { CompletePage }          from '@/pages/CompletePage';
+import { UsageGuidePage }        from '@/pages/UsageGuidePage';
 import { AdminLoginPage }        from '@/pages/admin/AdminLoginPage';
 import { AdminReservationList }  from '@/pages/admin/AdminReservationList';
 import { AdminReservationDetail } from '@/pages/admin/AdminReservationDetail';
+import { AdminFacilityManagement } from '@/pages/admin/AdminFacilityManagement';
 import { RequireAdmin }          from '@/components/RequireAdmin';
 
 export default function App() {
@@ -14,6 +16,7 @@ export default function App() {
         <Routes>
           {/* 一般ユーザー向け */}
           <Route path="/"          element={<ReservationPage />} />
+          <Route path="/guide"     element={<UsageGuidePage />} />
           <Route path="/complete"  element={<CompletePage />} />
 
           {/* 管理者向け */}
@@ -31,6 +34,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <AdminReservationDetail />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/facilities"
+            element={
+              <RequireAdmin>
+                <AdminFacilityManagement />
               </RequireAdmin>
             }
           />

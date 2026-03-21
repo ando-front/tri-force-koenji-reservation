@@ -9,6 +9,12 @@ interface Props {
   onSelectSlot:    (startTime: string) => void;
 }
 
+function formatReservedNames(names: string[]): string {
+  if (names.length === 0) return '';
+  if (names.length <= 2) return names.join(' / ');
+  return `${names.slice(0, 2).join(' / ')} 他${names.length - 2}件`;
+}
+
 export function AvailabilityGrid({ facilityId, date, selectedSlot, onSelectSlot }: Props) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['availability', facilityId, date],
@@ -29,7 +35,7 @@ export function AvailabilityGrid({ facilityId, date, selectedSlot, onSelectSlot 
   }
 
   if (!data?.slots.length) {
-    return <p className="text-sm text-gray-500">この日は定休日または営業時間外です</p>;
+    return <p className="text-sm text-gray-500">この日は定休日またはメンテナンス日です</p>;
   }
 
   return (
@@ -39,6 +45,7 @@ export function AvailabilityGrid({ facilityId, date, selectedSlot, onSelectSlot 
         {data.slots.map((slot: AvailabilitySlot) => {
           const isSelected = selectedSlot === slot.startTime;
           const isFull     = !slot.available;
+          const reservedNames = formatReservedNames(slot.reservedNames);
 
           return (
             <button
@@ -56,15 +63,21 @@ export function AvailabilityGrid({ facilityId, date, selectedSlot, onSelectSlot 
             >
               {slot.startTime}
               {!isFull && (
-                <span className="block text-xs text-gray-400">
+                <span className={`block text-xs ${isSelected ? 'text-brand-100' : 'text-gray-400'}`}>
                   残{Math.max(slot.capacity - slot.currentCount, 0)}
                 </span>
               )}
               {isFull && <span className="block text-xs">満員</span>}
+              {reservedNames && (
+                <span className={`mt-1 block px-1 text-[10px] leading-tight ${isSelected ? 'text-brand-50' : 'text-gray-500'}`}>
+                  {reservedNames}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
+      <p className="mt-3 text-xs text-gray-500">各時間帯には予約者名を公開表示しています。満員枠は選択できません。</p>
     </div>
   );
 }

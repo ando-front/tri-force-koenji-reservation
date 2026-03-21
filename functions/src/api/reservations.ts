@@ -7,7 +7,7 @@ import {
   deleteReservation,
   writeAuditLog,
 } from '../infra/firestoreRepository';
-import { isWithinOperatingHours, calcEndTime } from '../domain/availability';
+import { isFacilityUnavailableOnDate, isWithinOperatingHours, calcEndTime } from '../domain/availability';
 import { sendReservationConfirmation }          from '../domain/notification';
 import { requireAdmin, getActor }               from './middleware';
 import {
@@ -46,6 +46,14 @@ router.post('/', async (req: Request, res: Response) => {
     res.status(400).json({
       success: false,
       error: { code: 'FACILITY_NOT_FOUND', message: '施設が見つかりません' },
+    });
+    return;
+  }
+
+  if (isFacilityUnavailableOnDate(facility, input.date)) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'FACILITY_UNAVAILABLE', message: '定休日またはメンテナンス日のため予約できません' },
     });
     return;
   }

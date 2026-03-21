@@ -1,6 +1,8 @@
 import { auth } from './firebase';
 import type {
   Facility,
+  CreateFacilityInput,
+  UpdateFacilityInput,
   AvailabilitySlot,
   CreateReservationResponse,
   ListReservationsQuery,
@@ -92,6 +94,34 @@ export function createReservation(
 }
 
 // ---- 管理者 API --------------------------------------------------------------
+
+/** 施設一覧を取得（管理者） */
+export function adminListFacilities(): Promise<Facility[]> {
+  return request<{ facilities: Facility[] }>('/facilities/admin', {}, true).then(
+    (res) => res.facilities,
+  );
+}
+
+/** 施設を作成（管理者） */
+export function adminCreateFacility(payload: CreateFacilityInput): Promise<Facility> {
+  return request<{ facility: Facility }>(
+    '/facilities/admin',
+    { method: 'POST', body: JSON.stringify(payload) },
+    true,
+  ).then((res) => res.facility);
+}
+
+/** 施設を更新（管理者） */
+export function adminUpdateFacility(
+  id: string,
+  payload: UpdateFacilityInput,
+): Promise<Facility> {
+  return request<{ facility: Facility }>(
+    `/facilities/admin/${id}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+    true,
+  ).then((res) => res.facility);
+}
 
 /** 予約一覧を取得（管理者） */
 export function adminListReservations(
