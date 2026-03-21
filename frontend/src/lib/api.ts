@@ -43,8 +43,14 @@ async function request<T>(
 // ---- 公開 API ---------------------------------------------------------------
 
 /** 施設一覧を取得 */
-export function fetchFacilities(): Promise<Facility[]> {
-  return request<Facility[]>('/facilities');
+export async function fetchFacilities(): Promise<Facility[]> {
+  const response = await request<Facility[] | { facilities?: Facility[] }>('/facilities');
+
+  // Backward compatibility: accept both array and wrapped payload formats.
+  if (Array.isArray(response)) return response;
+  if (response && Array.isArray(response.facilities)) return response.facilities;
+
+  return [];
 }
 
 /** 空き状況を取得 */
