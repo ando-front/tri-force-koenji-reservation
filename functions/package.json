@@ -2,32 +2,34 @@
   "name": "tri-force-koenji-functions",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": "20" },
+  "engines": {
+    "node": "20"
+  },
   "main": "lib/functions/src/index.js",
   "scripts": {
-    "build":    "tsc",
+    "build": "tsc",
     "build:watch": "tsc --watch",
-    "serve":    "npm run build && firebase emulators:start --only functions",
-    "lint":     "eslint --ext .ts src/",
-    "test":     "jest --config jest.config.js",
-    "deploy":   "firebase deploy --only functions",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "lint": "eslint --ext .ts src/",
+    "test": "jest --config jest.config.js",
+    "deploy": "firebase deploy --only functions",
     "seed:facilities": "npm run build && node lib/functions/src/scripts/seedFacilities.js"
   },
   "dependencies": {
-    "cors":              "^2.8.5",
-    "express":           "^4.19.2",
-    "firebase-admin":    "^12.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.1.0",
     "firebase-functions": "^5.1.0",
-    "resend":            "^3.2.0",
-    "zod":               "^3.23.8"
+    "resend": "^3.2.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/cors":       "^2.8.17",
-    "@types/express":    "^4.17.21",
-    "@types/jest":       "^29.5.12",
-    "@types/node":       "^20.12.7",
-    "jest":              "^29.7.0",
-    "ts-jest":           "^29.1.4",
-    "typescript":        "^5.4.5"
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.4",
+    "typescript": "^5.4.5"
   }
 }
