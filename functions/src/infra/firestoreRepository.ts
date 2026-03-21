@@ -5,7 +5,7 @@ import {
   ReservationStatus,
   AuditAction,
   ListReservationsQuery,
-} from '@shared/types';
+} from '../../../shared/types';
 
 const db = () => admin.firestore();
 

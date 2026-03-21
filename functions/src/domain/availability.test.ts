@@ -1,5 +1,5 @@
 import { generateSlots, isWithinOperatingHours, calcEndTime } from '../domain/availability';
-import { Facility } from '@shared/types';
+import { Facility } from '../../../shared/types';
 
 const baseFacility: Facility = {
   facilityId:          'test-facility',

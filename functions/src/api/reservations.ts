@@ -15,7 +15,7 @@ import {
   UpdateStatusSchema,
   ListReservationsQuery,
   ReservationStatus,
-} from '@shared/types';
+} from '../../../shared/types';
 import type { ZodIssue } from 'zod';
 
 const router = Router();

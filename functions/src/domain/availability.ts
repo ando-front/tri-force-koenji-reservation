@@ -1,4 +1,4 @@
-import { Facility, AvailabilitySlot } from '@shared/types';
+import { Facility, AvailabilitySlot } from '../../../shared/types';
 
 /**
  * 施設の営業時間をスロット配列に展開する

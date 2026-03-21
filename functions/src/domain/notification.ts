@@ -1,13 +1,19 @@
 import { Resend } from 'resend';
-import { Reservation } from '@shared/types';
+import { Reservation } from '../../../shared/types';
 
-const resendClient = new Resend(process.env.RESEND_API_KEY ?? '');
 const FROM_ADDRESS = process.env.MAIL_FROM ?? 'noreply@tri-force-koenji.jp';
 const ADMIN_BCC    = process.env.ADMIN_MAIL_BCC ?? '';
 
 /** 予約確認メールを送信する（失敗しても例外を投げない） */
 export async function sendReservationConfirmation(reservation: Reservation): Promise<void> {
   try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error('[email] RESEND_API_KEY is not configured');
+      return;
+    }
+
+    const resendClient = new Resend(apiKey);
     const subject = `【Tri-force Koenji】施設予約を受け付けました（予約番号: ${reservation.reservationId.slice(0, 8).toUpperCase()}）`;
     const text = buildConfirmationText(reservation);
 

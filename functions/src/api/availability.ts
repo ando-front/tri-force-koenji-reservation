@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getFacility, getReservationCountsBySlot } from '../infra/firestoreRepository';
 import { generateSlots } from '../domain/availability';
-import { AvailabilitySlot } from '@shared/types';
+import { AvailabilitySlot } from '../../../shared/types';
 
 const router = Router();
 
