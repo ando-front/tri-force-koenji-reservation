@@ -145,7 +145,7 @@ export function AdminFacilityManagement() {
     setErrorMessage(null);
 
     if (isEditing && selectedFacilityId) {
-      const { facilityId: _facilityId, ...payload } = form;
+      const { facilityId: _, ...payload } = form;
       updateMutation.mutate({ id: selectedFacilityId, payload });
       return;
     }
