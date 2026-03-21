@@ -1,5 +1,6 @@
 export type {
   Facility,
+  WeekdayHours,
   CreateFacilityInput,
   UpdateFacilityInput,
   Reservation,

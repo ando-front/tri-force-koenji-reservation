@@ -13,6 +13,7 @@ import type {
   Facility,
   CreateFacilityInput,
   UpdateFacilityInput,
+  WeekdayHours,
 } from '@/types';
 
 const WEEKDAYS = [
@@ -36,6 +37,7 @@ const defaultFormState = (): FacilityFormState => ({
   slotDurationMinutes: 60,
   closedWeekdays: [],
   maintenanceDates: [],
+  weekdayHours: [],
   isActive: true,
 });
 
@@ -49,8 +51,21 @@ function toFormState(facility: Facility): FacilityFormState {
     slotDurationMinutes: facility.slotDurationMinutes,
     closedWeekdays: facility.closedWeekdays,
     maintenanceDates: facility.maintenanceDates,
+    weekdayHours: facility.weekdayHours ?? [],
     isActive: facility.isActive,
   };
+}
+
+/** dateFrom から dateTo までの日付文字列の配列を返す */
+function dateRange(from: string, to: string): string[] {
+  const result: string[] = [];
+  const current = new Date(from + 'T00:00:00');
+  const end = new Date(to + 'T00:00:00');
+  while (current <= end) {
+    result.push(current.toISOString().split('T')[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  return result;
 }
 
 export function AdminFacilityManagement() {
@@ -59,6 +74,8 @@ export function AdminFacilityManagement() {
   const [form, setForm] = useState<FacilityFormState>(defaultFormState);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [maintenanceDateInput, setMaintenanceDateInput] = useState('');
+  const [maintenanceDateFrom, setMaintenanceDateFrom] = useState('');
+  const [maintenanceDateTo, setMaintenanceDateTo] = useState('');
 
   const { data: facilities = [], isLoading, isError } = useQuery({
     queryKey: ['admin', 'facilities'],
@@ -106,6 +123,8 @@ export function AdminFacilityManagement() {
     setForm(defaultFormState());
     setErrorMessage(null);
     setMaintenanceDateInput('');
+    setMaintenanceDateFrom('');
+    setMaintenanceDateTo('');
   }
 
   function updateField<K extends keyof FacilityFormState>(key: K, value: FacilityFormState[K]) {
@@ -133,11 +152,65 @@ export function AdminFacilityManagement() {
     setMaintenanceDateInput('');
   }
 
+  function addMaintenanceDateRange() {
+    if (!maintenanceDateFrom || !maintenanceDateTo) return;
+    if (maintenanceDateFrom > maintenanceDateTo) return;
+    const dates = dateRange(maintenanceDateFrom, maintenanceDateTo);
+    setForm((current) => ({
+      ...current,
+      maintenanceDates: [...new Set([...current.maintenanceDates, ...dates])].sort(),
+    }));
+    setMaintenanceDateFrom('');
+    setMaintenanceDateTo('');
+  }
+
   function removeMaintenanceDate(date: string) {
     setForm((current) => ({
       ...current,
       maintenanceDates: current.maintenanceDates.filter((value) => value !== date),
     }));
+  }
+
+  function updateWeekdayHours(weekday: number, field: keyof Omit<WeekdayHours, 'weekday'>, value: number | undefined) {
+    setForm((current) => {
+      const existing = current.weekdayHours ?? [];
+      const idx = existing.findIndex((wh) => wh.weekday === weekday);
+      if (idx === -1) {
+        // 新規追加（施設デフォルトをベースに）
+        return {
+          ...current,
+          weekdayHours: [
+            ...existing,
+            {
+              weekday,
+              openHour: field === 'openHour' ? (value ?? current.openHour) : current.openHour,
+              closeHour: field === 'closeHour' ? (value ?? current.closeHour) : current.closeHour,
+              slotDurationMinutes: field === 'slotDurationMinutes' ? value : undefined,
+            },
+          ].sort((a, b) => a.weekday - b.weekday),
+        };
+      }
+      const updated = [...existing];
+      updated[idx] = { ...updated[idx], [field]: value };
+      return { ...current, weekdayHours: updated };
+    });
+  }
+
+  function toggleWeekdayHours(weekday: number, enabled: boolean) {
+    setForm((current) => {
+      const existing = current.weekdayHours ?? [];
+      if (!enabled) {
+        return { ...current, weekdayHours: existing.filter((wh) => wh.weekday !== weekday) };
+      }
+      if (existing.some((wh) => wh.weekday === weekday)) return current;
+      return {
+        ...current,
+        weekdayHours: [
+          ...existing,
+          { weekday, openHour: current.openHour, closeHour: current.closeHour },
+        ].sort((a, b) => a.weekday - b.weekday),
+      };
+    });
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -295,42 +368,115 @@ export function AdminFacilityManagement() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <label className="form-label" htmlFor="openHour">営業開始</label>
-                <input
-                  id="openHour"
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={form.openHour}
-                  onChange={(event) => updateField('openHour', Number(event.target.value))}
-                  className="form-input"
-                />
+            {/* デフォルト営業時間 */}
+            <div>
+              <span className="form-label">デフォルト営業時間</span>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1" htmlFor="openHour">開始</label>
+                  <input
+                    id="openHour"
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={form.openHour}
+                    onChange={(event) => updateField('openHour', Number(event.target.value))}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1" htmlFor="closeHour">終了</label>
+                  <input
+                    id="closeHour"
+                    type="number"
+                    min={1}
+                    max={24}
+                    value={form.closeHour}
+                    onChange={(event) => updateField('closeHour', Number(event.target.value))}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1" htmlFor="slotDurationMinutes">枠時間(分)</label>
+                  <input
+                    id="slotDurationMinutes"
+                    type="number"
+                    min={15}
+                    step={15}
+                    value={form.slotDurationMinutes}
+                    onChange={(event) => updateField('slotDurationMinutes', Number(event.target.value))}
+                    className="form-input"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="form-label" htmlFor="closeHour">営業終了</label>
-                <input
-                  id="closeHour"
-                  type="number"
-                  min={1}
-                  max={24}
-                  value={form.closeHour}
-                  onChange={(event) => updateField('closeHour', Number(event.target.value))}
-                  className="form-input"
-                />
-              </div>
-              <div>
-                <label className="form-label" htmlFor="slotDurationMinutes">枠時間(分)</label>
-                <input
-                  id="slotDurationMinutes"
-                  type="number"
-                  min={15}
-                  step={15}
-                  value={form.slotDurationMinutes}
-                  onChange={(event) => updateField('slotDurationMinutes', Number(event.target.value))}
-                  className="form-input"
-                />
+            </div>
+
+            {/* 曜日別営業時間 */}
+            <div>
+              <span className="form-label">曜日別営業時間（カスタム設定）</span>
+              <p className="mb-2 text-xs text-gray-500">チェックを入れた曜日のみ個別の営業時間を設定できます。未設定の曜日はデフォルト営業時間を使用します。</p>
+              <div className="space-y-2 rounded-md border border-gray-200 p-3">
+                {WEEKDAYS.map((weekday) => {
+                  const override = (form.weekdayHours ?? []).find((wh) => wh.weekday === weekday.value);
+                  const isEnabled = Boolean(override);
+                  return (
+                    <div key={weekday.value} className="flex flex-wrap items-center gap-2">
+                      <label className="flex w-12 items-center gap-1.5 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          onChange={(e) => toggleWeekdayHours(weekday.value, e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                        <span>{weekday.label}</span>
+                      </label>
+                      {isEnabled && override && (
+                        <>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-500">開始</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={23}
+                              value={override.openHour}
+                              onChange={(e) => updateWeekdayHours(weekday.value, 'openHour', Number(e.target.value))}
+                              className="form-input w-16 py-1 text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-500">終了</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={24}
+                              value={override.closeHour}
+                              onChange={(e) => updateWeekdayHours(weekday.value, 'closeHour', Number(e.target.value))}
+                              className="form-input w-16 py-1 text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-500">枠(分)</span>
+                            <input
+                              type="number"
+                              min={15}
+                              step={15}
+                              placeholder={String(form.slotDurationMinutes)}
+                              value={override.slotDurationMinutes ?? ''}
+                              onChange={(e) =>
+                                updateWeekdayHours(
+                                  weekday.value,
+                                  'slotDurationMinutes',
+                                  e.target.value === '' ? undefined : Number(e.target.value),
+                                )
+                              }
+                              className="form-input w-20 py-1 text-sm"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -352,8 +498,10 @@ export function AdminFacilityManagement() {
             </div>
 
             <div>
-              <label className="form-label" htmlFor="maintenanceDate">メンテナンス日</label>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <label className="form-label">メンテナンス日</label>
+
+              {/* 1日単位で追加 */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   id="maintenanceDate"
                   type="date"
@@ -362,9 +510,37 @@ export function AdminFacilityManagement() {
                   className="form-input"
                 />
                 <button type="button" onClick={addMaintenanceDate} className="btn-secondary whitespace-nowrap">
-                  日付を追加
+                  1日追加
                 </button>
               </div>
+
+              {/* 期間で一括追加 */}
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  type="date"
+                  value={maintenanceDateFrom}
+                  onChange={(e) => setMaintenanceDateFrom(e.target.value)}
+                  className="form-input"
+                  placeholder="開始日"
+                />
+                <span className="text-sm text-gray-500">〜</span>
+                <input
+                  type="date"
+                  value={maintenanceDateTo}
+                  onChange={(e) => setMaintenanceDateTo(e.target.value)}
+                  className="form-input"
+                  placeholder="終了日"
+                />
+                <button
+                  type="button"
+                  onClick={addMaintenanceDateRange}
+                  disabled={!maintenanceDateFrom || !maintenanceDateTo || maintenanceDateFrom > maintenanceDateTo}
+                  className="btn-secondary whitespace-nowrap disabled:opacity-40"
+                >
+                  期間で一括追加
+                </button>
+              </div>
+
               <div className="mt-3 flex flex-wrap gap-2">
                 {form.maintenanceDates.length === 0 && (
                   <span className="text-sm text-gray-500">登録されているメンテナンス日はありません</span>

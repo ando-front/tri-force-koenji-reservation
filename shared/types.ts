@@ -9,6 +9,14 @@ function todayString(): string {
 
 // ─── 施設 ─────────────────────────────────────────────────────────────────────
 
+/** 曜日ごとの営業時間設定 */
+export interface WeekdayHours {
+  weekday: number;             // 0=日〜6=土
+  openHour: number;            // 0-23
+  closeHour: number;           // 1-24
+  slotDurationMinutes?: number; // 省略時は施設デフォルトを使用
+}
+
 export interface Facility {
   facilityId: string;
   name: string;
@@ -18,12 +26,28 @@ export interface Facility {
   slotDurationMinutes: number;
   closedWeekdays: number[]; // 0=日〜6=土
   maintenanceDates: string[];
+  weekdayHours?: WeekdayHours[]; // 曜日ごとの営業時間（省略時は共通設定を使用）
   isActive: boolean;
   createdAt: unknown; // Firestore Timestamp
   updatedAt: unknown;
 }
 
 const DateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付は YYYY-MM-DD 形式で入力してください');
+
+const WeekdayHoursSchema = z.object({
+  weekday: z.number().int().min(0).max(6),
+  openHour: z.number().int().min(0, '開始時刻が不正です').max(23, '開始時刻が不正です'),
+  closeHour: z.number().int().min(1, '終了時刻が不正です').max(24, '終了時刻が不正です'),
+  slotDurationMinutes: z
+    .number()
+    .int()
+    .min(15, '枠時間は15分以上で入力してください')
+    .max(180, '枠時間は180分以下で入力してください')
+    .optional(),
+}).refine((v) => v.closeHour > v.openHour, {
+  message: '終了時刻は開始時刻より後にしてください',
+  path: ['closeHour'],
+});
 
 const FacilityFormBaseSchema = z.object({
   facilityId: z
@@ -42,6 +66,7 @@ const FacilityFormBaseSchema = z.object({
     .max(180, '枠時間は180分以下で入力してください'),
   closedWeekdays: z.array(z.number().int().min(0).max(6)).default([]),
   maintenanceDates: z.array(DateStringSchema).default([]),
+  weekdayHours: z.array(WeekdayHoursSchema).default([]),
   isActive: z.boolean().default(true),
 });
 

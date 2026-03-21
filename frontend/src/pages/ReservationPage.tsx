@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { FacilitySelector }  from '@/components/FacilitySelector';
 import { AvailabilityGrid }  from '@/components/AvailabilityGrid';
 import { ReservationForm }   from '@/components/ReservationForm';
+import { fetchFacilities } from '@/lib/api';
+import type { Facility } from '@/types';
 
 /** 今日の日付を YYYY-MM-DD で返す */
 function today(): string {
@@ -16,6 +19,14 @@ function maxDate(): string {
   return d.toISOString().split('T')[0];
 }
 
+/** 指定日がメンテナンス日または定休日かどうかを確認する */
+function isDateUnavailable(facility: Facility | undefined, date: string): boolean {
+  if (!facility) return false;
+  if (facility.maintenanceDates.includes(date)) return true;
+  const weekday = new Date(date + 'T00:00:00').getDay();
+  return facility.closedWeekdays.includes(weekday);
+}
+
 type Step = 'select' | 'form';
 
 export function ReservationPage() {
@@ -24,7 +35,19 @@ export function ReservationPage() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [step,        setStep]        = useState<Step>('select');
 
-  const canProceed = Boolean(facilityId) && Boolean(date) && Boolean(selectedSlot);
+  const { data: facilities = [] } = useQuery({
+    queryKey: ['facilities'],
+    queryFn:  fetchFacilities,
+  });
+
+  const selectedFacility = useMemo(
+    () => facilities.find((f: Facility) => f.facilityId === facilityId),
+    [facilities, facilityId],
+  );
+
+  const dateUnavailable = isDateUnavailable(selectedFacility, date);
+
+  const canProceed = Boolean(facilityId) && Boolean(date) && Boolean(selectedSlot) && !dateUnavailable;
 
   function handleProceed() {
     if (canProceed) setStep('form');
@@ -32,6 +55,16 @@ export function ReservationPage() {
 
   function handleBack() {
     setStep('select');
+    setSelectedSlot(null);
+  }
+
+  function handleFacilityChange(id: string) {
+    setFacilityId(id);
+    setSelectedSlot(null);
+  }
+
+  function handleDateChange(newDate: string) {
+    setDate(newDate);
     setSelectedSlot(null);
   }
 
@@ -61,7 +94,7 @@ export function ReservationPage() {
             </div>
 
             {/* 施設選択 */}
-            <FacilitySelector value={facilityId} onChange={setFacilityId} />
+            <FacilitySelector value={facilityId} onChange={handleFacilityChange} />
 
             {/* 日付選択 */}
             <div>
@@ -74,21 +107,26 @@ export function ReservationPage() {
                 value={date}
                 min={today()}
                 max={maxDate()}
-                onChange={(e) => {
-                  setDate(e.target.value);
-                  setSelectedSlot(null);
-                }}
-                className="form-input"
+                onChange={(e) => handleDateChange(e.target.value)}
+                className={`form-input ${dateUnavailable ? 'border-amber-400 bg-amber-50' : ''}`}
               />
+              {dateUnavailable && facilityId && (
+                <p className="mt-1.5 flex items-center gap-1 text-sm text-amber-700">
+                  <span aria-hidden="true">⚠️</span>
+                  この日は定休日またはメンテナンス日のため予約できません。別の日付を選択してください。
+                </p>
+              )}
             </div>
 
             {/* 空き状況グリッド */}
-            <AvailabilityGrid
-              facilityId={facilityId}
-              date={date}
-              selectedSlot={selectedSlot}
-              onSelectSlot={setSelectedSlot}
-            />
+            {!dateUnavailable && (
+              <AvailabilityGrid
+                facilityId={facilityId}
+                date={date}
+                selectedSlot={selectedSlot}
+                onSelectSlot={setSelectedSlot}
+              />
+            )}
 
             {/* 次へ */}
             <button

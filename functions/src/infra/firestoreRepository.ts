@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import {
   Facility,
+  WeekdayHours,
   CreateFacilityInput,
   UpdateFacilityInput,
   Reservation,
@@ -14,6 +15,22 @@ const db = () => admin.firestore();
 function normalizeDateList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.filter((item): item is string => typeof item === 'string'))].sort();
+}
+
+function normalizeWeekdayHours(value: unknown): WeekdayHours[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object')
+    .map((item) => ({
+      weekday: Number(item.weekday),
+      openHour: Number(item.openHour),
+      closeHour: Number(item.closeHour),
+      ...(item.slotDurationMinutes !== undefined && item.slotDurationMinutes !== null
+        ? { slotDurationMinutes: Number(item.slotDurationMinutes) }
+        : {}),
+    }))
+    .filter((wh) => wh.weekday >= 0 && wh.weekday <= 6)
+    .sort((a, b) => a.weekday - b.weekday);
 }
 
 function normalizeFacility(docId: string, data: Record<string, unknown>): Facility {
@@ -30,6 +47,7 @@ function normalizeFacility(docId: string, data: Record<string, unknown>): Facili
       ? data.closedWeekdays.map((value) => Number(value))
       : [],
     maintenanceDates: normalizeDateList(data.maintenanceDates),
+    weekdayHours: normalizeWeekdayHours(data.weekdayHours),
     isActive: Boolean(data.isActive ?? true),
     createdAt: data.createdAt ?? nowFallback,
     updatedAt: data.updatedAt ?? nowFallback,
