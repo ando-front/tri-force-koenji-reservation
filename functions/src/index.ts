@@ -8,6 +8,9 @@ import availabilityRouter  from './api/availability';
 import reservationsRouter  from './api/reservations';
 import { errorHandler }    from './api/middleware';
 
+// スケジュール関数
+export { sendDailyReminder } from './reminder';
+
 // Firebase Admin SDK の初期化（Cloud Functions環境では資格情報を自動取得）
 admin.initializeApp();
 
