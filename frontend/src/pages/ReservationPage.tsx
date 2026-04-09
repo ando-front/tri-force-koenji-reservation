@@ -127,6 +127,11 @@ export function ReservationPage() {
             </button>
           </div>
         )}
+        <footer className="mt-8 text-center">
+          <Link to="/admin/login" className="text-xs text-gray-400 hover:text-gray-600">
+            管理者ログイン
+          </Link>
+        </footer>
       </div>
     </div>
   );
