@@ -131,7 +131,7 @@ router.get('/:id/cancel', async (req: Request, res: Response) => {
   }
 
   // cancelToken はフロントに返さない
-  const { cancelToken: _omit, ...safe } = reservation;
+  const { cancelToken: _unused, ...safe } = reservation; // eslint-disable-line @typescript-eslint/no-unused-vars
   res.json({ success: true, reservation: safe });
 });
 
@@ -216,20 +216,12 @@ router.get('/admin', requireAdmin, async (req: Request, res: Response) => {
 
 /** GET /admin/reservations/:id — 予約詳細 */
 router.get('/admin/:id', requireAdmin, async (req: Request, res: Response) => {
-  const { reservations } = await listReservations({ limit: 1 });
-  // 個別取得はリポジトリ関数を追加するか、一覧から取得する簡易実装
-  const snap = await require('firebase-admin')
-    .firestore()
-    .collection('reservations')
-    .doc(req.params.id)
-    .get();
-
-  if (!snap.exists) {
+  const reservation = await getReservationById(req.params.id);
+  if (!reservation) {
     res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '予約が見つかりません' } });
     return;
   }
-  res.json({ success: true, reservation: { reservationId: snap.id, ...snap.data() } });
-  void reservations; // suppress unused warning
+  res.json({ success: true, reservation });
 });
 
 /** PATCH /admin/reservations/:id/status — ステータス更新 */
@@ -270,14 +262,10 @@ router.patch('/admin/:id/status', requireAdmin, async (req: Request, res: Respon
 router.delete('/admin/:id', requireAdmin, async (req: Request, res: Response) => {
   try {
     // 削除前にスナップショットを取得して監査ログに保存
-    const snap = await require('firebase-admin')
-      .firestore()
-      .collection('reservations')
-      .doc(req.params.id)
-      .get();
+    const snapshot = await getReservationById(req.params.id);
 
     await deleteReservation(req.params.id);
-    await writeAuditLog(getActor(req), 'reservation.deleted', req.params.id, snap.data() ?? {});
+    await writeAuditLog(getActor(req), 'reservation.deleted', req.params.id, (snapshot as unknown as Record<string, unknown>) ?? {});
 
     res.json({ success: true });
   } catch (err) {
