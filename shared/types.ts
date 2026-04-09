@@ -81,6 +81,7 @@ export interface Reservation {
   participants: number;
   remarks: string;
   status: ReservationStatus;
+  cancelToken: string; // ユーザーキャンセル用トークン (UUID)
   createdAt: unknown; // Firestore Timestamp
   updatedAt: unknown;
   cancelledAt?: unknown;

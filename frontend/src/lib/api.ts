@@ -93,6 +93,28 @@ export function createReservation(
   });
 }
 
+// ---- キャンセル API -----------------------------------------------------------
+
+/** キャンセルページ用: 予約詳細を取得（トークン認証） */
+export function fetchReservationForCancel(
+  id: string,
+  token: string,
+): Promise<{ reservation: Reservation }> {
+  const params = new URLSearchParams({ token });
+  return request<{ reservation: Reservation }>(`/reservations/${id}/cancel?${params}`);
+}
+
+/** ユーザー自身による予約キャンセル（トークン認証） */
+export function cancelReservation(
+  id: string,
+  token: string,
+): Promise<{ reservation: Reservation }> {
+  return request<{ reservation: Reservation }>(`/reservations/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  });
+}
+
 // ---- 管理者 API --------------------------------------------------------------
 
 /** 施設一覧を取得（管理者） */

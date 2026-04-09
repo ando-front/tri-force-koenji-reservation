@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import {
   createReservation,
   getFacility,
+  getReservationById,
   listReservations,
   updateReservationStatus,
   deleteReservation,
@@ -110,6 +111,58 @@ router.post('/', async (req: Request, res: Response) => {
       return;
     }
     throw err; // 想定外エラーはExpressエラーハンドラに委譲
+  }
+});
+
+/** GET /reservations/:id/cancel — キャンセル用予約詳細取得（トークン認証） */
+router.get('/:id/cancel', async (req: Request, res: Response) => {
+  const { token } = req.query as Record<string, string>;
+  if (!token) {
+    res.status(400).json({ success: false, error: { code: 'MISSING_TOKEN', message: 'キャンセルトークンが必要です' } });
+    return;
+  }
+
+  const reservation = await getReservationById(req.params.id);
+  if (!reservation || reservation.cancelToken !== token) {
+    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '予約が見つかりません' } });
+    return;
+  }
+
+  // cancelToken はフロントに返さない
+  const { cancelToken: _omit, ...safe } = reservation;
+  res.json({ success: true, reservation: safe });
+});
+
+/** POST /reservations/:id/cancel — ユーザー自身による予約キャンセル（トークン認証） */
+router.post('/:id/cancel', async (req: Request, res: Response) => {
+  const { token } = req.body as { token?: string };
+  if (!token) {
+    res.status(400).json({ success: false, error: { code: 'MISSING_TOKEN', message: 'キャンセルトークンが必要です' } });
+    return;
+  }
+
+  const reservation = await getReservationById(req.params.id);
+  if (!reservation || reservation.cancelToken !== token) {
+    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '予約が見つかりません' } });
+    return;
+  }
+
+  if (reservation.status === 'cancelled') {
+    res.status(409).json({ success: false, error: { code: 'ALREADY_CANCELLED', message: 'この予約は既にキャンセルされています' } });
+    return;
+  }
+
+  try {
+    const updated = await updateReservationStatus(req.params.id, 'cancelled', 'ユーザーによるキャンセル');
+    await writeAuditLog('system', 'reservation.cancelled', req.params.id, { cancelledBy: 'user' });
+    res.json({ success: true, reservation: updated });
+  } catch (err) {
+    const e = err as { code?: string };
+    if (e.code === 'INVALID_TRANSITION') {
+      res.status(409).json({ success: false, error: { code: 'INVALID_TRANSITION', message: 'この予約はキャンセルできません' } });
+      return;
+    }
+    throw err;
   }
 });
 

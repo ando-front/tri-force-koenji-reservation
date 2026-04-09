@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ReservationPage }       from '@/pages/ReservationPage';
 import { CompletePage }          from '@/pages/CompletePage';
+import { CancelPage }            from '@/pages/CancelPage';
 import { UsageGuidePage }        from '@/pages/UsageGuidePage';
 import { AdminLoginPage }        from '@/pages/admin/AdminLoginPage';
 import { AdminReservationList }  from '@/pages/admin/AdminReservationList';
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/"          element={<ReservationPage />} />
           <Route path="/guide"     element={<UsageGuidePage />} />
           <Route path="/complete"  element={<CompletePage />} />
+          <Route path="/cancel"    element={<CancelPage />} />
 
           {/* 管理者向け */}
           <Route path="/admin/login" element={<AdminLoginPage />} />

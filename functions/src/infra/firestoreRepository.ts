@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import * as crypto from 'crypto';
 import {
   Facility,
   CreateFacilityInput,
@@ -108,7 +109,7 @@ export async function updateFacility(
  * 重複（定員超過含む）がある場合は Error をスロー。
  */
 export async function createReservation(
-  data: Omit<Reservation, 'reservationId' | 'createdAt' | 'updatedAt'>
+  data: Omit<Reservation, 'reservationId' | 'cancelToken' | 'createdAt' | 'updatedAt'>
 ): Promise<Reservation> {
   const reservationRef = db().collection('reservations').doc();
 
@@ -132,9 +133,11 @@ export async function createReservation(
     }
 
     const now = admin.firestore.FieldValue.serverTimestamp();
+    const cancelToken = crypto.randomUUID();
     tx.set(reservationRef, {
       ...data,
       reservationId: reservationRef.id,
+      cancelToken,
       createdAt:     now,
       updatedAt:     now,
     });
@@ -142,6 +145,13 @@ export async function createReservation(
 
   const saved = await reservationRef.get();
   return { reservationId: saved.id, ...saved.data() } as Reservation;
+}
+
+/** 予約を1件取得する */
+export async function getReservationById(reservationId: string): Promise<Reservation | null> {
+  const snap = await db().collection('reservations').doc(reservationId).get();
+  if (!snap.exists) return null;
+  return { reservationId: snap.id, ...snap.data() } as Reservation;
 }
 
 /** 予約のステータスを更新する */
