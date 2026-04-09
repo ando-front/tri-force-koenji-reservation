@@ -102,6 +102,32 @@ export async function updateFacility(
   return normalizeFacility(updated.id, updated.data() ?? {});
 }
 
+/** 施設を物理削除する（予約が存在しない場合のみ） */
+export async function deleteFacility(facilityId: string): Promise<void> {
+  const ref = db().collection('facilities').doc(facilityId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw Object.assign(new Error('NOT_FOUND'), { code: 'NOT_FOUND' });
+  }
+
+  // 関連する有効予約がある場合は削除不可
+  const activeReservations = await db()
+    .collection('reservations')
+    .where('facilityId', '==', facilityId)
+    .where('status', 'in', ['pending', 'confirmed'])
+    .limit(1)
+    .get();
+
+  if (!activeReservations.empty) {
+    throw Object.assign(
+      new Error('HAS_ACTIVE_RESERVATIONS'),
+      { code: 'HAS_ACTIVE_RESERVATIONS' },
+    );
+  }
+
+  await ref.delete();
+}
+
 // ─── 予約 ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -267,6 +293,71 @@ export async function getReservationSummaryBySlot(
 }
 
 // ─── 監査ログ ──────────────────────────────────────────────────────────────────
+
+/** ダッシュボード用: 予約統計を集計する */
+export async function getDashboardStats(today: string, weekStart: string, monthStart: string): Promise<{
+  today:    { total: number; pending: number; confirmed: number; cancelled: number };
+  week:     { total: number; pending: number; confirmed: number; cancelled: number };
+  month:    { total: number; pending: number; confirmed: number; cancelled: number };
+  recent:   Reservation[];
+}> {
+  // 当月以降の予約を一括取得してメモリ集計（小規模ジムなので十分）
+  const snap = await db()
+    .collection('reservations')
+    .where('date', '>=', monthStart)
+    .orderBy('date', 'desc')
+    .orderBy('startTime', 'desc')
+    .limit(500)
+    .get();
+
+  const allReservations = snap.docs.map((d) => ({
+    reservationId: d.id,
+    ...d.data(),
+  })) as Reservation[];
+
+  const count = (list: Reservation[]) => ({
+    total:     list.length,
+    pending:   list.filter((r) => r.status === 'pending').length,
+    confirmed: list.filter((r) => r.status === 'confirmed').length,
+    cancelled: list.filter((r) => r.status === 'cancelled').length,
+  });
+
+  return {
+    today: count(allReservations.filter((r) => r.date === today)),
+    week:  count(allReservations.filter((r) => r.date >= weekStart && r.date <= today)),
+    month: count(allReservations.filter((r) => r.date >= monthStart)),
+    recent: allReservations.slice(0, 10),
+  };
+}
+
+/** 監査ログを取得する（対象IDで絞り込み） */
+export async function getAuditLogs(targetId: string): Promise<Array<{
+  logId: string;
+  actor: string;
+  action: AuditAction;
+  targetId: string;
+  payload: Record<string, unknown>;
+  timestamp: unknown;
+}>> {
+  const snap = await db()
+    .collection('auditLogs')
+    .where('targetId', '==', targetId)
+    .orderBy('timestamp', 'desc')
+    .limit(50)
+    .get();
+
+  return snap.docs.map((d) => ({
+    logId: d.id,
+    ...d.data(),
+  })) as Array<{
+    logId: string;
+    actor: string;
+    action: AuditAction;
+    targetId: string;
+    payload: Record<string, unknown>;
+    timestamp: unknown;
+  }>;
+}
 
 export async function writeAuditLog(
   actor: string,

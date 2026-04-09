@@ -5,6 +5,7 @@ import { CompletePage }          from '@/pages/CompletePage';
 import { CancelPage }            from '@/pages/CancelPage';
 import { UsageGuidePage }        from '@/pages/UsageGuidePage';
 import { AdminLoginPage }        from '@/pages/admin/AdminLoginPage';
+import { AdminDashboard }        from '@/pages/admin/AdminDashboard';
 import { AdminReservationList }  from '@/pages/admin/AdminReservationList';
 import { AdminReservationDetail } from '@/pages/admin/AdminReservationDetail';
 import { AdminFacilityManagement } from '@/pages/admin/AdminFacilityManagement';
@@ -26,6 +27,14 @@ export default function App() {
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route
             path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminDashboard />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/reservations"
             element={
               <RequireAdmin>
                 <AdminReservationList />

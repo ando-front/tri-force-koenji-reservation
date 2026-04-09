@@ -117,6 +117,51 @@ export function cancelReservation(
 
 // ---- 管理者 API --------------------------------------------------------------
 
+// ---- ダッシュボード / 監査ログ API --------------------------------------------
+
+/** ダッシュボード統計を取得 */
+export interface DashboardStats {
+  today: { total: number; pending: number; confirmed: number; cancelled: number };
+  week:  { total: number; pending: number; confirmed: number; cancelled: number };
+  month: { total: number; pending: number; confirmed: number; cancelled: number };
+  recent: Reservation[];
+}
+
+export function adminGetDashboardStats(): Promise<DashboardStats> {
+  return request<DashboardStats & { success: boolean }>(
+    '/reservations/admin/dashboard',
+    {},
+    true,
+  );
+}
+
+/** 予約の監査ログを取得 */
+export interface AuditLogEntry {
+  logId: string;
+  actor: string;
+  action: string;
+  targetId: string;
+  payload: Record<string, unknown>;
+  timestamp: { _seconds: number; _nanoseconds: number } | null;
+}
+
+export function adminGetAuditLogs(reservationId: string): Promise<AuditLogEntry[]> {
+  return request<{ logs: AuditLogEntry[] }>(
+    `/reservations/admin/${reservationId}/audit-logs`,
+    {},
+    true,
+  ).then((res) => res.logs);
+}
+
+/** 施設を削除（管理者） */
+export function adminDeleteFacility(id: string): Promise<void> {
+  return request<void>(
+    `/facilities/admin/${id}`,
+    { method: 'DELETE' },
+    true,
+  );
+}
+
 /** 施設一覧を取得（管理者） */
 export function adminListFacilities(): Promise<Facility[]> {
   return request<{ facilities: Facility[] }>('/facilities/admin', {}, true).then(

@@ -4,7 +4,9 @@ import {
   adminGetReservation,
   adminUpdateReservationStatus,
   adminDeleteReservation,
+  adminGetAuditLogs,
 } from '@/lib/api';
+import type { AuditLogEntry } from '@/lib/api';
 import { formatReservationDisplayName } from '@/lib/reservationDisplay';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -29,6 +31,12 @@ export function AdminReservationDetail() {
     enabled:  Boolean(id),
   });
 
+  const { data: auditLogs } = useQuery({
+    queryKey: ['admin', 'audit-logs', id],
+    queryFn:  () => adminGetAuditLogs(id!),
+    enabled:  Boolean(id),
+  });
+
   const confirmMutation = useMutation({
     mutationFn: () =>
       adminUpdateReservationStatus(id!, { status: 'confirmed' }),
@@ -49,7 +57,7 @@ export function AdminReservationDetail() {
 
   const deleteMutation = useMutation({
     mutationFn: () => adminDeleteReservation(id!),
-    onSuccess:  () => navigate('/admin'),
+    onSuccess:  () => navigate('/admin/reservations'),
   });
 
   function handleCancel() {
@@ -82,11 +90,11 @@ export function AdminReservationDetail() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
         <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
-          <Link to="/admin" className="text-sm text-brand-600 hover:underline">
+          <Link to="/admin/reservations" className="text-sm text-brand-600 hover:underline">
             ← 一覧に戻る
           </Link>
-          <Link to="/admin/manual" className="text-sm text-brand-600 hover:underline">
-            操作マニュアル
+          <Link to="/admin" className="text-sm text-brand-600 hover:underline">
+            ダッシュボード
           </Link>
           <h1 className="text-lg font-bold text-gray-900">予約詳細</h1>
         </div>
@@ -164,7 +172,42 @@ export function AdminReservationDetail() {
             </p>
           )}
         </div>
+
+        {/* 監査ログ */}
+        {auditLogs && auditLogs.length > 0 && (
+          <div className="card">
+            <h2 className="text-sm font-semibold text-gray-700 mb-3">操作履歴</h2>
+            <div className="space-y-2">
+              {auditLogs.map((log: AuditLogEntry) => (
+                <div key={log.logId} className="flex items-start gap-3 text-xs border-b border-gray-50 pb-2">
+                  <span className="shrink-0 text-gray-400 whitespace-nowrap">
+                    {log.timestamp
+                      ? new Date((log.timestamp as { _seconds: number })._seconds * 1000).toLocaleString('ja-JP')
+                      : '—'}
+                  </span>
+                  <span className="font-medium text-gray-700">
+                    {formatAuditAction(log.action)}
+                  </span>
+                  <span className="text-gray-500">
+                    by {log.actor === 'system' ? 'システム' : log.actor.slice(0, 8)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+const AUDIT_ACTION_LABEL: Record<string, string> = {
+  'reservation.created':   '予約作成',
+  'reservation.confirmed': '予約確定',
+  'reservation.cancelled': '予約キャンセル',
+  'reservation.deleted':   '予約削除',
+};
+
+function formatAuditAction(action: string): string {
+  return AUDIT_ACTION_LABEL[action] ?? action;
 }

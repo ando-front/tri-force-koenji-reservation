@@ -8,6 +8,7 @@ import {
   adminCreateFacility,
   adminListFacilities,
   adminUpdateFacility,
+  adminDeleteFacility,
 } from '@/lib/api';
 import type {
   Facility,
@@ -98,6 +99,19 @@ export function AdminFacilityManagement() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => adminDeleteFacility(id),
+    onSuccess: () => {
+      setErrorMessage(null);
+      resetForm();
+      qc.invalidateQueries({ queryKey: ['admin', 'facilities'] });
+      qc.invalidateQueries({ queryKey: ['facilities'] });
+    },
+    onError: (error) => {
+      setErrorMessage(error.message);
+    },
+  });
+
   const isEditing = Boolean(selectedFacilityId);
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
@@ -158,13 +172,16 @@ export function AdminFacilityManagement() {
       <header className="bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
+            <h1 className="text-lg font-bold text-gray-900">施設管理</h1>
             <Link to="/admin" className="text-sm text-brand-600 hover:underline">
-              ← 予約管理へ
+              ダッシュボード
+            </Link>
+            <Link to="/admin/reservations" className="text-sm text-brand-600 hover:underline">
+              予約管理
             </Link>
             <Link to="/admin/manual" className="text-sm text-brand-600 hover:underline">
-              操作マニュアル
+              マニュアル
             </Link>
-            <h1 className="text-lg font-bold text-gray-900">施設管理</h1>
           </div>
           <button onClick={() => signOut(auth)} className="btn-secondary text-xs">
             ログアウト
@@ -393,6 +410,20 @@ export function AdminFacilityManagement() {
               <button type="button" onClick={resetForm} className="btn-secondary">
                 入力をリセット
               </button>
+              {isEditing && (
+                <button
+                  type="button"
+                  disabled={deleteMutation.isPending}
+                  className="btn-danger ml-auto"
+                  onClick={() => {
+                    if (!selectedFacilityId) return;
+                    if (!window.confirm(`施設「${form.name}」を削除しますか？\n有効な予約がある場合は削除できません。`)) return;
+                    deleteMutation.mutate(selectedFacilityId);
+                  }}
+                >
+                  {deleteMutation.isPending ? '削除中…' : '施設を削除'}
+                </button>
+              )}
             </div>
           </form>
         </section>

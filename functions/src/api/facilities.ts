@@ -5,6 +5,7 @@ import {
   listFacilitiesAdmin,
   createFacility,
   updateFacility,
+  deleteFacility,
 } from '../infra/firestoreRepository';
 import { requireAdmin, getActor } from './middleware';
 import {
@@ -83,6 +84,32 @@ router.patch('/admin/:id', requireAdmin, async (req: Request, res: Response) => 
       res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: '施設が見つかりません' },
+      });
+      return;
+    }
+    throw error;
+  }
+});
+
+/** DELETE /facilities/admin/:id — 施設削除（管理者） */
+router.delete('/admin/:id', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    await deleteFacility(req.params.id);
+    console.log('[facility.deleted]', getActor(req), req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    const err = error as { code?: string };
+    if (err.code === 'NOT_FOUND') {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: '施設が見つかりません' },
+      });
+      return;
+    }
+    if (err.code === 'HAS_ACTIVE_RESERVATIONS') {
+      res.status(409).json({
+        success: false,
+        error: { code: 'HAS_ACTIVE_RESERVATIONS', message: '有効な予約が存在するため削除できません。先に予約をキャンセルまたは削除してください。' },
       });
       return;
     }

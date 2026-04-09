@@ -119,11 +119,14 @@ export function AdminReservationList() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-bold text-gray-900">予約管理</h1>
-            <Link to="/admin/manual" className="text-sm text-brand-600 hover:underline">
-              操作マニュアル
+            <Link to="/admin" className="text-sm text-brand-600 hover:underline">
+              ダッシュボード
             </Link>
             <Link to="/admin/facilities" className="text-sm text-brand-600 hover:underline">
-              施設管理へ
+              施設管理
+            </Link>
+            <Link to="/admin/manual" className="text-sm text-brand-600 hover:underline">
+              マニュアル
             </Link>
           </div>
           <button

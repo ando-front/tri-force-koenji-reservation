@@ -7,6 +7,8 @@ import {
   updateReservationStatus,
   deleteReservation,
   writeAuditLog,
+  getDashboardStats,
+  getAuditLogs,
 } from '../infra/firestoreRepository';
 import { isFacilityUnavailableOnDate, isWithinOperatingHours, calcEndTime } from '../domain/availability';
 import { sendReservationConfirmation }          from '../domain/notification';
@@ -167,6 +169,33 @@ router.post('/:id/cancel', async (req: Request, res: Response) => {
 });
 
 // ─── 管理者API ───────────────────────────────────────────────────────────────
+
+/** GET /admin/dashboard — ダッシュボード統計 */
+router.get('/admin/dashboard', requireAdmin, async (_req: Request, res: Response) => {
+  const now = new Date();
+  // JST で日付を計算
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const today = jst.toISOString().split('T')[0];
+
+  // 今週の月曜日
+  const dayOfWeek = jst.getUTCDay(); // 0=Sun
+  const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const weekStartDate = new Date(jst);
+  weekStartDate.setUTCDate(jst.getUTCDate() - mondayOffset);
+  const weekStart = weekStartDate.toISOString().split('T')[0];
+
+  // 今月1日
+  const monthStart = `${today.slice(0, 7)}-01`;
+
+  const stats = await getDashboardStats(today, weekStart, monthStart);
+  res.json({ success: true, ...stats });
+});
+
+/** GET /admin/reservations/:id/audit-logs — 予約の監査ログ */
+router.get('/admin/:id/audit-logs', requireAdmin, async (req: Request, res: Response) => {
+  const logs = await getAuditLogs(req.params.id);
+  res.json({ success: true, logs });
+});
 
 /** GET /admin/reservations — 予約一覧 */
 router.get('/admin', requireAdmin, async (req: Request, res: Response) => {
