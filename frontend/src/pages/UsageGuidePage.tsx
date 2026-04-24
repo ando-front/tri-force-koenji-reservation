@@ -51,6 +51,18 @@ export function UsageGuidePage() {
           </section>
 
           <section className="card">
+            <h2 className="text-lg font-semibold text-gray-900">予約の確認・キャンセル</h2>
+            <p className="mt-4 text-sm leading-7 text-gray-700">
+              予約完了時に発行される8桁の予約番号と、予約時に入力したメールアドレスを
+              <Link to="/my-reservation" className="mx-1 font-medium text-brand-600 underline underline-offset-2">
+                予約確認ページ
+              </Link>
+              に入力すると、予約内容の確認と利用日当日までのキャンセルが行えます。
+              過去日の予約を変更したい場合は、運営までご連絡ください。
+            </p>
+          </section>
+
+          <section className="card">
             <h2 className="text-lg font-semibold text-gray-900">留意事項</h2>
             <ul className="mt-4 space-y-3 text-sm leading-7 text-gray-700">
               {notes.map((note) => (

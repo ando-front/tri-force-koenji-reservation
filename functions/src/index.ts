@@ -13,6 +13,11 @@ admin.initializeApp();
 
 const app = express();
 
+// Cloud Functions / Cloud Run は Google Front End 経由でリクエストを受けるため、
+// X-Forwarded-For を信頼して req.ip に実クライアントIPを入れる。
+// これによりレート制限が偽装ヘッダで回避されないようにする。
+app.set('trust proxy', true);
+
 // ─── グローバルミドルウェア ────────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, cb) => {

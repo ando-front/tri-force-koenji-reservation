@@ -130,6 +130,11 @@ export async function createReservation(
 ): Promise<Reservation> {
   const reservationRef = db().collection('reservations').doc();
 
+  // 会員セルフサービス照会用のデノーマライズ済みフィールド。
+  // email の大小文字・前後空白による取りこぼしを防ぐ。
+  const emailLower = data.email.trim().toLowerCase();
+  const reservationCode = reservationRef.id.slice(0, 8).toUpperCase();
+
   await db().runTransaction(async (tx) => {
     // 同一施設・同一日・時間が重複する pending/confirmed 予約を取得
     const conflictSnap = await tx.get(
@@ -152,9 +157,11 @@ export async function createReservation(
     const now = admin.firestore.FieldValue.serverTimestamp();
     tx.set(reservationRef, {
       ...data,
-      reservationId: reservationRef.id,
-      createdAt:     now,
-      updatedAt:     now,
+      reservationId:   reservationRef.id,
+      reservationCode,
+      emailLower,
+      createdAt:       now,
+      updatedAt:       now,
     });
   });
 
@@ -193,6 +200,64 @@ export async function updateReservationStatus(
   await ref.update(update);
   const updated = await ref.get();
   return { reservationId: updated.id, ...updated.data() } as Reservation;
+}
+
+/**
+ * 予約番号（先頭8文字大文字）とメールアドレスから予約を検索する。
+ * 該当がなければ null を返す。
+ *
+ * 検索は2段階:
+ * 1. 正規化済みの `reservationCode` + `emailLower` の等価検索（新規予約向け）
+ * 2. デノーマライズ済みフィールドがない既存予約向けフォールバック:
+ *    `email` 完全一致で引いてドキュメントIDの先頭8文字と照合
+ */
+export async function findReservationByCodeAndEmail(
+  reservationCode: string,
+  email: string
+): Promise<Reservation | null> {
+  const normalizedCode  = reservationCode.trim().toUpperCase();
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Step 1: デノーマライズ済みフィールドでの等価検索（高速・正確）
+  const primary = await db()
+    .collection('reservations')
+    .where('reservationCode', '==', normalizedCode)
+    .where('emailLower',      '==', normalizedEmail)
+    .limit(5)
+    .get();
+
+  if (!primary.empty) {
+    const doc = primary.docs[0];
+    return { reservationId: doc.id, ...doc.data() } as Reservation;
+  }
+
+  // Step 2: 既存予約向けフォールバック。emailLower が未設定のデータを
+  // 救済するため、email フィールドの完全一致を試みる。
+  // 大文字小文字が混在して保存されていた場合を考慮し、
+  // 入力値そのもの・lower・可能であれば元ケースの両方で検索を行う。
+  const fallbackCandidates = Array.from(
+    new Set([email.trim(), normalizedEmail])
+  ).filter((v) => v.length > 0);
+
+  for (const candidate of fallbackCandidates) {
+    const snap = await db()
+      .collection('reservations')
+      .where('email', '==', candidate)
+      .limit(100)
+      .get();
+
+    for (const doc of snap.docs) {
+      if (doc.id.slice(0, 8).toUpperCase() !== normalizedCode) continue;
+      const data = doc.data();
+      const storedEmail =
+        typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
+      if (storedEmail === normalizedEmail) {
+        return { reservationId: doc.id, ...data } as Reservation;
+      }
+    }
+  }
+
+  return null;
 }
 
 /** 予約を物理削除する */

@@ -52,6 +52,60 @@ export function getActor(req: Request): string {
   return req.adminUid ?? 'system';
 }
 
+/**
+ * シンプルなインメモリのIP別レートリミッタ。
+ * Cloud Functions v2 の各インスタンスで独立にカウントされるため
+ * 厳密な制限ではないが、総当たり攻撃の抑止には十分。
+ *
+ * 呼び出し元の Express アプリで `app.set('trust proxy', true)` が
+ * 設定されている前提で、`req.ip` から実クライアントIPを取得する。
+ * X-Forwarded-For を直接解釈すると偽装ヘッダを通してしまうため使わない。
+ */
+export function rateLimitByIp(options: {
+  windowMs: number;
+  max: number;
+  key: string;
+}): (req: Request, res: Response, next: NextFunction) => void {
+  const buckets = new Map<string, { count: number; resetAt: number }>();
+
+  // 期限切れエントリのスイープは短い周期で行い、サイズ上限未満でも
+  // メモリを回収できるようにする。
+  const cleanupIntervalMs = Math.min(options.windowMs, 60_000);
+  let nextCleanupAt = 0;
+
+  return (req, res, next) => {
+    const ip = (req.ip ?? 'unknown').trim();
+    const cacheKey = `${options.key}:${ip}`;
+    const now = Date.now();
+
+    if (now >= nextCleanupAt || buckets.size > 10_000) {
+      for (const [k, v] of buckets) {
+        if (v.resetAt <= now) buckets.delete(k);
+      }
+      nextCleanupAt = now + cleanupIntervalMs;
+    }
+
+    const bucket = buckets.get(cacheKey);
+    if (!bucket || bucket.resetAt <= now) {
+      buckets.set(cacheKey, { count: 1, resetAt: now + options.windowMs });
+      next();
+      return;
+    }
+
+    bucket.count += 1;
+    if (bucket.count > options.max) {
+      const retryAfterSec = Math.ceil((bucket.resetAt - now) / 1000);
+      res.setHeader('Retry-After', String(retryAfterSec));
+      res.status(429).json({
+        success: false,
+        error: { code: 'RATE_LIMITED', message: 'リクエストが多すぎます。しばらく経ってから再度お試しください。' },
+      });
+      return;
+    }
+    next();
+  };
+}
+
 /** 共通エラーハンドラ（Expressの4引数エラーハンドラ） */
 export function errorHandler(
   err: unknown,
