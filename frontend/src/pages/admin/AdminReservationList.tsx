@@ -117,8 +117,11 @@ export function AdminReservationList() {
       {/* ヘッダー */}
       <header className="bg-white shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-lg font-bold text-gray-900">予約管理</h1>
+            <Link to="/admin/dashboard" className="text-sm text-brand-600 hover:underline">
+              ダッシュボード
+            </Link>
             <Link to="/admin/manual" className="text-sm text-brand-600 hover:underline">
               操作マニュアル
             </Link>

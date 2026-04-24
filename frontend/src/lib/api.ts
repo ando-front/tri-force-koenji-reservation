@@ -6,6 +6,7 @@ import type {
   AvailabilitySlot,
   CancelReservationInput,
   CreateReservationResponse,
+  DashboardStats,
   ListReservationsQuery,
   LookupReservationInput,
   PublicReservationView,
@@ -159,6 +160,13 @@ export function adminListReservations(
     `/reservations/admin?${params}`,
     {},
     true,
+  );
+}
+
+/** ダッシュボード統計を取得（管理者） */
+export function adminGetDashboardStats(): Promise<DashboardStats> {
+  return request<{ stats: DashboardStats }>('/reservations/admin/stats', {}, true).then(
+    (res) => res.stats,
   );
 }
 

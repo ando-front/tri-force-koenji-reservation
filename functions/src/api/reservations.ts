@@ -3,12 +3,16 @@ import {
   createReservation,
   findReservationByCodeAndEmail,
   getFacility,
+  listFacilitiesAdmin,
   listReservations,
+  listReservationsByDateRange,
   updateReservationStatus,
   deleteReservation,
   writeAuditLog,
 } from '../infra/firestoreRepository';
 import { isFacilityUnavailableOnDate, isWithinOperatingHours, calcEndTime } from '../domain/availability';
+import { todayJst } from '../domain/date';
+import { buildDashboardStats, buildDashboardWindows } from '../domain/dashboardStats';
 import { sendReservationConfirmation }          from '../domain/notification';
 import { rateLimitByIp, requireAdmin, getActor } from './middleware';
 import {
@@ -44,12 +48,6 @@ function toPublicView(reservation: Reservation): PublicReservationView {
   };
 }
 
-/** 今日の日付 "YYYY-MM-DD" (JST基準) */
-function todayStringJst(): string {
-  const now = new Date();
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return jst.toISOString().split('T')[0];
-}
 
 // ─── 公開API ──────────────────────────────────────────────────────────────────
 
@@ -205,7 +203,7 @@ router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Respons
   }
 
   // 過去日はキャンセル不可（当日は可）
-  if (reservation.date < todayStringJst()) {
+  if (reservation.date < todayJst()) {
     res.status(409).json({
       success: false,
       error: { code: 'PAST_RESERVATION', message: '過去の予約はキャンセルできません。運営までご連絡ください。' },
@@ -230,6 +228,21 @@ router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Respons
 });
 
 // ─── 管理者API ───────────────────────────────────────────────────────────────
+
+/**
+ * GET /admin/stats — ダッシュボード向け集計
+ * 過去30日〜翌7日の予約を1クエリで取得し、集計して返す。
+ */
+router.get('/admin/stats', requireAdmin, async (_req: Request, res: Response) => {
+  const now = new Date();
+  const win = buildDashboardWindows(now);
+  const [reservations, facilities] = await Promise.all([
+    listReservationsByDateRange(win.queryFrom, win.queryTo),
+    listFacilitiesAdmin(),
+  ]);
+  const stats = buildDashboardStats(reservations, facilities, now);
+  res.json({ success: true, stats });
+});
 
 /** GET /admin/reservations — 予約一覧 */
 router.get('/admin', requireAdmin, async (req: Request, res: Response) => {
