@@ -45,8 +45,10 @@ export function MyReservationPage() {
   } = useForm<LookupForm>({
     resolver: zodResolver(LookupReservationSchema),
     defaultValues: {
+      // 予約番号は URL クエリから受け取り可能。メールアドレスはブラウザ履歴や
+      // リファラに残るのを避けるため、クエリからは受け付けない。
       reservationCode: searchParams.get('code') ?? '',
-      email:           searchParams.get('email') ?? '',
+      email:           '',
     },
   });
 

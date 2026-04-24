@@ -97,6 +97,10 @@ export interface Reservation {
   reservationId: string;
   memberName: string;
   email: string;
+  /** 会員セルフサービス照会用: email を trim + toLowerCase に正規化した値 */
+  emailLower?: string;
+  /** 会員セルフサービス照会用: 予約IDの先頭8文字を大文字化した値 */
+  reservationCode?: string;
   facilityId: string;
   facilityName: string;
   date: string;       // "YYYY-MM-DD"
@@ -189,10 +193,20 @@ const ReservationCodeSchema = z
   .toUpperCase()
   .regex(/^[A-Z0-9]{8}$/, '予約番号は8桁の英数字で入力してください');
 
+/**
+ * 会員照会用のメール正規化スキーマ。
+ * 前後スペースを除去し、小文字化してから email バリデーションを行う。
+ */
+const NormalizedEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email('正しいメールアドレスを入力してください');
+
 /** POST /reservations/lookup リクエストボディ */
 export const LookupReservationSchema = z.object({
   reservationCode: ReservationCodeSchema,
-  email:           z.string().email('正しいメールアドレスを入力してください'),
+  email:           NormalizedEmailSchema,
 });
 
 export type LookupReservationInput = z.infer<typeof LookupReservationSchema>;
@@ -200,7 +214,7 @@ export type LookupReservationInput = z.infer<typeof LookupReservationSchema>;
 /** POST /reservations/lookup/cancel リクエストボディ */
 export const CancelReservationSchema = z.object({
   reservationCode: ReservationCodeSchema,
-  email:           z.string().email('正しいメールアドレスを入力してください'),
+  email:           NormalizedEmailSchema,
   cancelReason:    z.string().max(500, '500文字以内で入力してください').optional().default(''),
 });
 

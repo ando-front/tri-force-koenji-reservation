@@ -56,6 +56,10 @@ export function getActor(req: Request): string {
  * シンプルなインメモリのIP別レートリミッタ。
  * Cloud Functions v2 の各インスタンスで独立にカウントされるため
  * 厳密な制限ではないが、総当たり攻撃の抑止には十分。
+ *
+ * 呼び出し元の Express アプリで `app.set('trust proxy', true)` が
+ * 設定されている前提で、`req.ip` から実クライアントIPを取得する。
+ * X-Forwarded-For を直接解釈すると偽装ヘッダを通してしまうため使わない。
  */
 export function rateLimitByIp(options: {
   windowMs: number;
@@ -64,16 +68,21 @@ export function rateLimitByIp(options: {
 }): (req: Request, res: Response, next: NextFunction) => void {
   const buckets = new Map<string, { count: number; resetAt: number }>();
 
+  // 期限切れエントリのスイープは短い周期で行い、サイズ上限未満でも
+  // メモリを回収できるようにする。
+  const cleanupIntervalMs = Math.min(options.windowMs, 60_000);
+  let nextCleanupAt = 0;
+
   return (req, res, next) => {
-    const ip = (req.headers['x-forwarded-for']?.toString().split(',')[0] ?? req.ip ?? 'unknown').trim();
+    const ip = (req.ip ?? 'unknown').trim();
     const cacheKey = `${options.key}:${ip}`;
     const now = Date.now();
 
-    // 古いエントリの破棄（容量制御）
-    if (buckets.size > 10000) {
+    if (now >= nextCleanupAt || buckets.size > 10_000) {
       for (const [k, v] of buckets) {
         if (v.resetAt <= now) buckets.delete(k);
       }
+      nextCleanupAt = now + cleanupIntervalMs;
     }
 
     const bucket = buckets.get(cacheKey);
