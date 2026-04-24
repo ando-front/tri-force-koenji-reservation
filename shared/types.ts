@@ -180,6 +180,49 @@ export const UpdateStatusSchema = z.object({
 
 export type UpdateStatusInput = z.infer<typeof UpdateStatusSchema>;
 
+// ─── 会員向け予約照会・キャンセル ─────────────────────────────────────────────
+
+/** 予約番号（予約IDの先頭8文字大文字）の正規表現 */
+const ReservationCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z0-9]{8}$/, '予約番号は8桁の英数字で入力してください');
+
+/** POST /reservations/lookup リクエストボディ */
+export const LookupReservationSchema = z.object({
+  reservationCode: ReservationCodeSchema,
+  email:           z.string().email('正しいメールアドレスを入力してください'),
+});
+
+export type LookupReservationInput = z.infer<typeof LookupReservationSchema>;
+
+/** POST /reservations/lookup/cancel リクエストボディ */
+export const CancelReservationSchema = z.object({
+  reservationCode: ReservationCodeSchema,
+  email:           z.string().email('正しいメールアドレスを入力してください'),
+  cancelReason:    z.string().max(500, '500文字以内で入力してください').optional().default(''),
+});
+
+export type CancelReservationInput = z.infer<typeof CancelReservationSchema>;
+
+/** 会員向けに返却する予約情報（機微情報を除く） */
+export interface PublicReservationView {
+  reservationCode: string;
+  memberName: string;
+  facilityId: string;
+  facilityName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  participants: number;
+  purpose: string;
+  remarks: string;
+  status: ReservationStatus;
+  cancelledAt?: unknown;
+  cancelReason?: string;
+}
+
 /** GET /availability レスポンスの各スロット */
 export interface AvailabilitySlot {
   startTime: string;

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import {
   createReservation,
+  findReservationByCodeAndEmail,
   getFacility,
   listReservations,
   updateReservationStatus,
@@ -9,9 +10,13 @@ import {
 } from '../infra/firestoreRepository';
 import { isFacilityUnavailableOnDate, isWithinOperatingHours, calcEndTime } from '../domain/availability';
 import { sendReservationConfirmation }          from '../domain/notification';
-import { requireAdmin, getActor }               from './middleware';
+import { rateLimitByIp, requireAdmin, getActor } from './middleware';
 import {
+  CancelReservationSchema,
   CreateReservationSchema,
+  LookupReservationSchema,
+  PublicReservationView,
+  Reservation,
   UpdateStatusSchema,
   ListReservationsQuery,
   ReservationStatus,
@@ -19,6 +24,32 @@ import {
 import type { ZodIssue } from 'zod';
 
 const router = Router();
+
+/** 予約エンティティから会員向け表示用の項目だけ抜き出す */
+function toPublicView(reservation: Reservation): PublicReservationView {
+  return {
+    reservationCode: reservation.reservationId.slice(0, 8).toUpperCase(),
+    memberName:      reservation.memberName,
+    facilityId:      reservation.facilityId,
+    facilityName:    reservation.facilityName,
+    date:            reservation.date,
+    startTime:       reservation.startTime,
+    endTime:         reservation.endTime,
+    participants:    reservation.participants,
+    purpose:         reservation.purpose,
+    remarks:         reservation.remarks ?? '',
+    status:          reservation.status,
+    cancelledAt:     reservation.cancelledAt,
+    cancelReason:    reservation.cancelReason,
+  };
+}
+
+/** 今日の日付 "YYYY-MM-DD" (JST基準) */
+function todayStringJst(): string {
+  const now = new Date();
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return jst.toISOString().split('T')[0];
+}
 
 // ─── 公開API ──────────────────────────────────────────────────────────────────
 
@@ -111,6 +142,91 @@ router.post('/', async (req: Request, res: Response) => {
     }
     throw err; // 想定外エラーはExpressエラーハンドラに委譲
   }
+});
+
+// ─── 会員セルフサービス ───────────────────────────────────────────────────────
+
+// 予約番号が見つからない場合でもメールの有無を推測されないよう
+// lookup と cancel で共通のメッセージを使う。
+const NOT_FOUND_MESSAGE = '予約番号またはメールアドレスが一致しません。';
+
+const lookupRateLimit = rateLimitByIp({ windowMs: 10 * 60 * 1000, max: 20, key: 'lookup' });
+const cancelRateLimit = rateLimitByIp({ windowMs: 10 * 60 * 1000, max: 5,  key: 'lookup-cancel' });
+
+/** POST /reservations/lookup — 予約番号＋メールで予約を照会する */
+router.post('/lookup', lookupRateLimit, async (req: Request, res: Response) => {
+  const parsed = LookupReservationSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: '入力内容を確認してください' },
+    });
+    return;
+  }
+
+  const reservation = await findReservationByCodeAndEmail(parsed.data.reservationCode, parsed.data.email);
+  if (!reservation) {
+    res.status(404).json({
+      success: false,
+      error: { code: 'NOT_FOUND', message: NOT_FOUND_MESSAGE },
+    });
+    return;
+  }
+
+  res.json({ success: true, reservation: toPublicView(reservation) });
+});
+
+/** POST /reservations/lookup/cancel — 会員自身が予約をキャンセルする */
+router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Response) => {
+  const parsed = CancelReservationSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: '入力内容を確認してください' },
+    });
+    return;
+  }
+
+  const reservation = await findReservationByCodeAndEmail(parsed.data.reservationCode, parsed.data.email);
+  if (!reservation) {
+    res.status(404).json({
+      success: false,
+      error: { code: 'NOT_FOUND', message: NOT_FOUND_MESSAGE },
+    });
+    return;
+  }
+
+  if (reservation.status === 'cancelled') {
+    res.status(409).json({
+      success: false,
+      error: { code: 'ALREADY_CANCELLED', message: 'この予約は既にキャンセル済みです。' },
+    });
+    return;
+  }
+
+  // 過去日はキャンセル不可（当日は可）
+  if (reservation.date < todayStringJst()) {
+    res.status(409).json({
+      success: false,
+      error: { code: 'PAST_RESERVATION', message: '過去の予約はキャンセルできません。運営までご連絡ください。' },
+    });
+    return;
+  }
+
+  const reason = parsed.data.cancelReason?.trim() ?? '';
+  const cancelReason = reason ? `[会員キャンセル] ${reason}` : '[会員キャンセル]';
+
+  const updated = await updateReservationStatus(reservation.reservationId, 'cancelled', cancelReason);
+  await writeAuditLog('member', 'reservation.cancelled', reservation.reservationId, {
+    status: 'cancelled',
+    cancelReason,
+    memberName: reservation.memberName,
+    date: reservation.date,
+    startTime: reservation.startTime,
+    facilityId: reservation.facilityId,
+  });
+
+  res.json({ success: true, reservation: toPublicView(updated) });
 });
 
 // ─── 管理者API ───────────────────────────────────────────────────────────────

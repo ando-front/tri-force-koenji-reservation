@@ -4,8 +4,11 @@ import type {
   CreateFacilityInput,
   UpdateFacilityInput,
   AvailabilitySlot,
+  CancelReservationInput,
   CreateReservationResponse,
   ListReservationsQuery,
+  LookupReservationInput,
+  PublicReservationView,
   Reservation,
 } from '@shared/types';
 
@@ -91,6 +94,26 @@ export function createReservation(
     method:  'POST',
     body:    JSON.stringify(payload),
   });
+}
+
+/** 予約番号＋メールで予約を照会する（会員向け） */
+export function lookupReservation(
+  payload: LookupReservationInput,
+): Promise<PublicReservationView> {
+  return request<{ reservation: PublicReservationView }>('/reservations/lookup', {
+    method: 'POST',
+    body:   JSON.stringify(payload),
+  }).then((res) => res.reservation);
+}
+
+/** 会員自身が予約をキャンセルする */
+export function cancelReservationByMember(
+  payload: CancelReservationInput,
+): Promise<PublicReservationView> {
+  return request<{ reservation: PublicReservationView }>('/reservations/lookup/cancel', {
+    method: 'POST',
+    body:   JSON.stringify(payload),
+  }).then((res) => res.reservation);
 }
 
 // ---- 管理者 API --------------------------------------------------------------

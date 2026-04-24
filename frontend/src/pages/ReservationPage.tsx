@@ -76,9 +76,12 @@ export function ReservationPage() {
           <p className="mt-1 text-sm text-gray-500">
             トライフォース高円寺
           </p>
-          <div className="mt-3 flex justify-center gap-4 text-sm">
+          <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
             <Link to="/guide" className="text-brand-600 hover:underline">
               利用案内・留意事項
+            </Link>
+            <Link to="/my-reservation" className="text-brand-600 hover:underline">
+              予約の確認・キャンセル
             </Link>
           </div>
         </header>

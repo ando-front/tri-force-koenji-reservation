@@ -52,6 +52,51 @@ export function getActor(req: Request): string {
   return req.adminUid ?? 'system';
 }
 
+/**
+ * シンプルなインメモリのIP別レートリミッタ。
+ * Cloud Functions v2 の各インスタンスで独立にカウントされるため
+ * 厳密な制限ではないが、総当たり攻撃の抑止には十分。
+ */
+export function rateLimitByIp(options: {
+  windowMs: number;
+  max: number;
+  key: string;
+}): (req: Request, res: Response, next: NextFunction) => void {
+  const buckets = new Map<string, { count: number; resetAt: number }>();
+
+  return (req, res, next) => {
+    const ip = (req.headers['x-forwarded-for']?.toString().split(',')[0] ?? req.ip ?? 'unknown').trim();
+    const cacheKey = `${options.key}:${ip}`;
+    const now = Date.now();
+
+    // 古いエントリの破棄（容量制御）
+    if (buckets.size > 10000) {
+      for (const [k, v] of buckets) {
+        if (v.resetAt <= now) buckets.delete(k);
+      }
+    }
+
+    const bucket = buckets.get(cacheKey);
+    if (!bucket || bucket.resetAt <= now) {
+      buckets.set(cacheKey, { count: 1, resetAt: now + options.windowMs });
+      next();
+      return;
+    }
+
+    bucket.count += 1;
+    if (bucket.count > options.max) {
+      const retryAfterSec = Math.ceil((bucket.resetAt - now) / 1000);
+      res.setHeader('Retry-After', String(retryAfterSec));
+      res.status(429).json({
+        success: false,
+        error: { code: 'RATE_LIMITED', message: 'リクエストが多すぎます。しばらく経ってから再度お試しください。' },
+      });
+      return;
+    }
+    next();
+  };
+}
+
 /** 共通エラーハンドラ（Expressの4引数エラーハンドラ） */
 export function errorHandler(
   err: unknown,

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ReservationPage }       from '@/pages/ReservationPage';
 import { CompletePage }          from '@/pages/CompletePage';
+import { MyReservationPage }     from '@/pages/MyReservationPage';
 import { UsageGuidePage }        from '@/pages/UsageGuidePage';
 import { AdminLoginPage }        from '@/pages/admin/AdminLoginPage';
 import { AdminReservationList }  from '@/pages/admin/AdminReservationList';
@@ -16,9 +17,10 @@ export default function App() {
       <AuthProvider>
         <Routes>
           {/* 一般ユーザー向け */}
-          <Route path="/"          element={<ReservationPage />} />
-          <Route path="/guide"     element={<UsageGuidePage />} />
-          <Route path="/complete"  element={<CompletePage />} />
+          <Route path="/"               element={<ReservationPage />} />
+          <Route path="/guide"          element={<UsageGuidePage />} />
+          <Route path="/complete"       element={<CompletePage />} />
+          <Route path="/my-reservation" element={<MyReservationPage />} />
 
           {/* 管理者向け */}
           <Route path="/admin/login" element={<AdminLoginPage />} />

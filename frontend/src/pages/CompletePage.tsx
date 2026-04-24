@@ -30,6 +30,9 @@ export function CompletePage() {
               <dt className="text-gray-500">予約番号</dt>
               <dd className="font-mono font-medium">{response.reservationId.slice(0, 8).toUpperCase()}</dd>
             </div>
+            <p className="text-xs text-gray-500 pt-1">
+              予約番号はキャンセルや内容確認の際に必要です。必ず控えておいてください。
+            </p>
           </dl>
         ) : null}
 
@@ -37,9 +40,17 @@ export function CompletePage() {
           {response?.message ?? '予約内容を受け付けました。確認メールをご確認ください。'}
         </p>
 
-        <Link to="/" className="btn-primary block w-full">
-          トップへ戻る
-        </Link>
+        <div className="space-y-2">
+          <Link
+            to={response ? `/my-reservation?code=${response.reservationId.slice(0, 8).toUpperCase()}` : '/my-reservation'}
+            className="btn-secondary block w-full"
+          >
+            予約内容を確認・キャンセルする
+          </Link>
+          <Link to="/" className="btn-primary block w-full">
+            トップへ戻る
+          </Link>
+        </div>
       </div>
     </div>
   );

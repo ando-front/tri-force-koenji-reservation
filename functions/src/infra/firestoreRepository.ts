@@ -195,6 +195,40 @@ export async function updateReservationStatus(
   return { reservationId: updated.id, ...updated.data() } as Reservation;
 }
 
+/**
+ * 予約番号（先頭8文字大文字）とメールアドレスから予約を検索する。
+ * 該当がなければ null を返す。
+ */
+export async function findReservationByCodeAndEmail(
+  reservationCode: string,
+  email: string
+): Promise<Reservation | null> {
+  const normalizedCode = reservationCode.trim().toUpperCase();
+  const trimmedEmail = email.trim();
+
+  // 同一メールの予約はそう多くない前提。Firestoreは単一フィールドの
+  // 自動インデックスを提供するため email だけで効率的に取れる。
+  const snaps = await Promise.all([
+    db().collection('reservations').where('email', '==', trimmedEmail).limit(50).get(),
+    // 大小の違いを許容するため lowercased でもう一度引く（件数が少ない場合のみ）
+    trimmedEmail !== trimmedEmail.toLowerCase()
+      ? db().collection('reservations').where('email', '==', trimmedEmail.toLowerCase()).limit(50).get()
+      : Promise.resolve({ docs: [] as admin.firestore.QueryDocumentSnapshot[] } as admin.firestore.QuerySnapshot),
+  ]);
+
+  const seen = new Set<string>();
+  for (const snap of snaps) {
+    for (const doc of snap.docs) {
+      if (seen.has(doc.id)) continue;
+      seen.add(doc.id);
+      if (doc.id.slice(0, 8).toUpperCase() === normalizedCode) {
+        return { reservationId: doc.id, ...doc.data() } as Reservation;
+      }
+    }
+  }
+  return null;
+}
+
 /** 予約を物理削除する */
 export async function deleteReservation(reservationId: string): Promise<void> {
   const ref = db().collection('reservations').doc(reservationId);
