@@ -3,12 +3,15 @@ import {
   createReservation,
   findReservationByCodeAndEmail,
   getFacility,
+  listFacilitiesAdmin,
   listReservations,
+  listReservationsByDateRange,
   updateReservationStatus,
   deleteReservation,
   writeAuditLog,
 } from '../infra/firestoreRepository';
 import { isFacilityUnavailableOnDate, isWithinOperatingHours, calcEndTime } from '../domain/availability';
+import { buildDashboardStats, buildDashboardWindows } from '../domain/dashboardStats';
 import { sendReservationConfirmation }          from '../domain/notification';
 import { rateLimitByIp, requireAdmin, getActor } from './middleware';
 import {
@@ -230,6 +233,21 @@ router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Respons
 });
 
 // ─── 管理者API ───────────────────────────────────────────────────────────────
+
+/**
+ * GET /admin/stats — ダッシュボード向け集計
+ * 過去30日〜翌7日の予約を1クエリで取得し、集計して返す。
+ */
+router.get('/admin/stats', requireAdmin, async (_req: Request, res: Response) => {
+  const now = new Date();
+  const win = buildDashboardWindows(now);
+  const [reservations, facilities] = await Promise.all([
+    listReservationsByDateRange(win.queryFrom, win.queryTo),
+    listFacilitiesAdmin(),
+  ]);
+  const stats = buildDashboardStats(reservations, facilities, now);
+  res.json({ success: true, stats });
+});
 
 /** GET /admin/reservations — 予約一覧 */
 router.get('/admin', requireAdmin, async (req: Request, res: Response) => {

@@ -270,6 +270,22 @@ export async function deleteReservation(reservationId: string): Promise<void> {
   await ref.delete();
 }
 
+/**
+ * 指定日付レンジ（inclusive）の予約をすべて取得する。
+ * ダッシュボードの集計用途。件数は数百件を想定。
+ */
+export async function listReservationsByDateRange(
+  dateFrom: string,
+  dateTo: string
+): Promise<Reservation[]> {
+  const snap = await db()
+    .collection('reservations')
+    .where('date', '>=', dateFrom)
+    .where('date', '<=', dateTo)
+    .get();
+  return snap.docs.map((d) => ({ reservationId: d.id, ...d.data() })) as Reservation[];
+}
+
 /** 予約一覧を取得する（管理者用） */
 export async function listReservations(
   query: ListReservationsQuery

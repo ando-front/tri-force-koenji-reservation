@@ -274,3 +274,47 @@ export interface ListReservationsQuery {
   limit?: number;
   cursor?: string; // Firestoreページネーションカーソル（base64エンコード）
 }
+
+// ─── 管理者ダッシュボード ─────────────────────────────────────────────────────
+
+export interface DashboardTodayStats {
+  date: string;                // "YYYY-MM-DD" (JST)
+  pending: number;
+  confirmed: number;
+  cancelled: number;
+  total: number;               // pending + confirmed （キャンセル除外）
+}
+
+export interface DashboardFacilityCount {
+  facilityId: string;
+  facilityName: string;
+  count: number;               // 有効な予約数（pending + confirmed）
+}
+
+export interface DashboardUpcomingWeekStats {
+  dateFrom: string;
+  dateTo: string;
+  total: number;
+  byFacility: DashboardFacilityCount[];
+}
+
+export interface DashboardLast30DaysStats {
+  dateFrom: string;
+  dateTo: string;
+  total: number;               // 全ステータス合計
+  cancelled: number;
+  cancellationRate: number;    // 0〜1、total=0 のときは 0
+}
+
+export interface DashboardTopMember {
+  memberName: string;          // 未入力は「（未入力）」として集計
+  count: number;
+}
+
+export interface DashboardStats {
+  generatedAt: string;         // ISO8601
+  today: DashboardTodayStats;
+  upcomingWeek: DashboardUpcomingWeekStats;
+  last30Days: DashboardLast30DaysStats;
+  topMembers: DashboardTopMember[];
+}
