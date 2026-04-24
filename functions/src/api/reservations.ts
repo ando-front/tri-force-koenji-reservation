@@ -11,6 +11,7 @@ import {
   writeAuditLog,
 } from '../infra/firestoreRepository';
 import { isFacilityUnavailableOnDate, isWithinOperatingHours, calcEndTime } from '../domain/availability';
+import { todayJst } from '../domain/date';
 import { buildDashboardStats, buildDashboardWindows } from '../domain/dashboardStats';
 import { sendReservationConfirmation }          from '../domain/notification';
 import { rateLimitByIp, requireAdmin, getActor } from './middleware';
@@ -47,12 +48,6 @@ function toPublicView(reservation: Reservation): PublicReservationView {
   };
 }
 
-/** 今日の日付 "YYYY-MM-DD" (JST基準) */
-function todayStringJst(): string {
-  const now = new Date();
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return jst.toISOString().split('T')[0];
-}
 
 // ─── 公開API ──────────────────────────────────────────────────────────────────
 
@@ -208,7 +203,7 @@ router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Respons
   }
 
   // 過去日はキャンセル不可（当日は可）
-  if (reservation.date < todayStringJst()) {
+  if (reservation.date < todayJst()) {
     res.status(409).json({
       success: false,
       error: { code: 'PAST_RESERVATION', message: '過去の予約はキャンセルできません。運営までご連絡ください。' },

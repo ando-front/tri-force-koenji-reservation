@@ -4,24 +4,17 @@ import type {
   Facility,
   Reservation,
 } from '../../../shared/types';
+import { todayJst, shiftDateString } from './date';
 
 const TOP_MEMBERS_LIMIT = 5;
 const ANON_NAME = '（未入力）';
 
-/** JST基準の "YYYY-MM-DD" を返す */
-export function todayJst(now: Date = new Date()): string {
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return jst.toISOString().split('T')[0];
-}
-
-/** "YYYY-MM-DD" の日付を days 日ずらした文字列を返す */
-export function shiftDateString(date: string, days: number): string {
-  const d = new Date(date + 'T00:00:00Z');
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().split('T')[0];
-}
-
-/** ダッシュボード用の集計範囲: 過去30日〜翌7日 */
+/**
+ * ダッシュボード用の集計範囲。
+ * すべて inclusive で扱う:
+ *  - 直近30日: today を含む過去30日間 (today-29 〜 today)
+ *  - 今後7日:  today を含む7日間   (today 〜 today+6)
+ */
 export interface DashboardWindows {
   today: string;
   last30From: string;
@@ -34,10 +27,10 @@ export interface DashboardWindows {
 
 export function buildDashboardWindows(now: Date = new Date()): DashboardWindows {
   const today = todayJst(now);
-  const last30From   = shiftDateString(today, -30);
+  const last30From   = shiftDateString(today, -29); // inclusive で30日分
   const last30To     = today;
   const upcomingFrom = today;
-  const upcomingTo   = shiftDateString(today, 7);
+  const upcomingTo   = shiftDateString(today, 6);   // inclusive で7日分
   return {
     today,
     last30From,
@@ -64,8 +57,8 @@ export function buildDashboardStats(
 
   // 今日のステータス別件数
   const todayCounts = { pending: 0, confirmed: 0, cancelled: 0 };
-  // 今後7日 施設別
-  const upcomingByFacility = new Map<string, number>();
+  // 今後7日 施設別（予約側のデノーマライズ名をフォールバックとして保持）
+  const upcomingByFacility = new Map<string, { count: number; fallbackName: string }>();
   // 直近30日
   let last30Total = 0;
   let last30Cancelled = 0;
@@ -82,7 +75,11 @@ export function buildDashboardStats(
     }
 
     if (r.date >= win.upcomingFrom && r.date <= win.upcomingTo && isActive) {
-      upcomingByFacility.set(r.facilityId, (upcomingByFacility.get(r.facilityId) ?? 0) + 1);
+      const prev = upcomingByFacility.get(r.facilityId);
+      upcomingByFacility.set(r.facilityId, {
+        count: (prev?.count ?? 0) + 1,
+        fallbackName: prev?.fallbackName || r.facilityName || '',
+      });
     }
 
     if (r.date >= win.last30From && r.date <= win.last30To) {
@@ -97,9 +94,10 @@ export function buildDashboardStats(
   }
 
   const byFacility: DashboardFacilityCount[] = Array.from(upcomingByFacility.entries())
-    .map(([facilityId, count]) => ({
+    .map(([facilityId, { count, fallbackName }]) => ({
       facilityId,
-      facilityName: facilityNameById.get(facilityId) ?? facilityId,
+      // 施設マスタ > 予約側のデノーマライズ名 > ID の順でフォールバックする
+      facilityName: facilityNameById.get(facilityId) || fallbackName || facilityId,
       count,
     }))
     .sort((a, b) => b.count - a.count);

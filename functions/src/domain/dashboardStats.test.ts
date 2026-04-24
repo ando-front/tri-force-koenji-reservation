@@ -1,4 +1,5 @@
-import { buildDashboardStats, buildDashboardWindows, shiftDateString, todayJst } from './dashboardStats';
+import { buildDashboardStats, buildDashboardWindows } from './dashboardStats';
+import { shiftDateString, todayJst } from './date';
 import type { Facility, Reservation } from '../../../shared/types';
 
 function makeReservation(overrides: Partial<Reservation>): Reservation {
@@ -64,16 +65,18 @@ describe('shiftDateString', () => {
 });
 
 describe('buildDashboardWindows', () => {
-  it('今日を中心に過去30日〜翌7日のレンジを返す', () => {
+  it('今日を含む過去30日と今日を含む今後7日のレンジを返す（inclusive）', () => {
     const now = new Date('2026-04-10T03:00:00Z'); // JST 12:00
     const win = buildDashboardWindows(now);
     expect(win.today).toBe('2026-04-10');
-    expect(win.last30From).toBe('2026-03-11');
+    // today-29 〜 today の inclusive で30日分
+    expect(win.last30From).toBe('2026-03-12');
     expect(win.last30To).toBe('2026-04-10');
+    // today 〜 today+6 の inclusive で7日分
     expect(win.upcomingFrom).toBe('2026-04-10');
-    expect(win.upcomingTo).toBe('2026-04-17');
-    expect(win.queryFrom).toBe('2026-03-11');
-    expect(win.queryTo).toBe('2026-04-17');
+    expect(win.upcomingTo).toBe('2026-04-16');
+    expect(win.queryFrom).toBe('2026-03-12');
+    expect(win.queryTo).toBe('2026-04-16');
   });
 });
 
@@ -103,11 +106,11 @@ describe('buildDashboardStats', () => {
       makeReservation({ date: '2026-04-11', facilityId: 'free-mat',  status: 'pending' }),
       makeReservation({ date: '2026-04-12', facilityId: 'fitness',   status: 'confirmed' }),
       makeReservation({ date: '2026-04-12', facilityId: 'free-mat',  status: 'cancelled' }), // 除外
-      makeReservation({ date: '2026-04-18', facilityId: 'free-mat',  status: 'confirmed' }), // 範囲外
+      makeReservation({ date: '2026-04-17', facilityId: 'free-mat',  status: 'confirmed' }), // 範囲外 (today+7)
     ];
     const stats = buildDashboardStats(reservations, facilities, now);
     expect(stats.upcomingWeek.dateFrom).toBe('2026-04-10');
-    expect(stats.upcomingWeek.dateTo).toBe('2026-04-17');
+    expect(stats.upcomingWeek.dateTo).toBe('2026-04-16');
     expect(stats.upcomingWeek.total).toBe(3);
     expect(stats.upcomingWeek.byFacility).toEqual([
       { facilityId: 'free-mat', facilityName: 'フリーマット', count: 2 },
@@ -157,13 +160,23 @@ describe('buildDashboardStats', () => {
     expect(stats.topMembers).toEqual([]);
   });
 
-  it('存在しない施設IDの予約は facilityId を facilityName として返す', () => {
+  it('施設マスタに無い施設は予約側のデノーマライズ名にフォールバックする', () => {
     const reservations = [
-      makeReservation({ date: '2026-04-10', facilityId: 'ghost', facilityName: '存在しない', status: 'confirmed' }),
+      makeReservation({ date: '2026-04-10', facilityId: 'ghost', facilityName: '存在しない施設', status: 'confirmed' }),
     ];
     const stats = buildDashboardStats(reservations, facilities, now);
     expect(stats.upcomingWeek.byFacility).toEqual([
-      { facilityId: 'ghost', facilityName: 'ghost', count: 1 },
+      { facilityId: 'ghost', facilityName: '存在しない施設', count: 1 },
+    ]);
+  });
+
+  it('施設マスタにも予約側 facilityName にも値が無ければ facilityId を返す', () => {
+    const reservations = [
+      makeReservation({ date: '2026-04-10', facilityId: 'orphan', facilityName: '', status: 'confirmed' }),
+    ];
+    const stats = buildDashboardStats(reservations, facilities, now);
+    expect(stats.upcomingWeek.byFacility).toEqual([
+      { facilityId: 'orphan', facilityName: 'orphan', count: 1 },
     ]);
   });
 });
