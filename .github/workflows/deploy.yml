@@ -67,6 +67,27 @@ jobs:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
       # action-hosting-deploy は Hosting のみのため、Functions は CLI で追加デプロイ
+      # 注意: 単に `env:` で渡すだけでは Cloud Functions v2 のランタイムには届かない。
+      #       firebase CLI が自動で読み込む `.env.<project>` ファイルに書き出すことで、
+      #       デプロイ時に runtime env vars としてバンドルされるようにする。
+      - name: Write Functions runtime env file
+        working-directory: functions
+        env:
+          RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
+          ADMIN_MAIL_BCC:       ${{ secrets.ADMIN_MAIL_BCC }}
+          MAIL_FROM:            ${{ secrets.MAIL_FROM }}
+          CORS_ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          FRONTEND_BASE_URL:    ${{ secrets.FRONTEND_BASE_URL }}
+        run: |
+          umask 077
+          {
+            printf 'RESEND_API_KEY=%s\n'       "$RESEND_API_KEY"
+            printf 'ADMIN_MAIL_BCC=%s\n'       "$ADMIN_MAIL_BCC"
+            printf 'MAIL_FROM=%s\n'            "$MAIL_FROM"
+            printf 'CORS_ALLOWED_ORIGINS=%s\n' "$CORS_ALLOWED_ORIGINS"
+            printf 'FRONTEND_BASE_URL=%s\n'    "$FRONTEND_BASE_URL"
+          } > .env.tri-force-koenji-reservation
+
       - name: Deploy Functions
         run: |
           npm install -g firebase-tools
@@ -74,10 +95,3 @@ jobs:
             --project tri-force-koenji-reservation \
             --token "${{ secrets.FIREBASE_CI_TOKEN }}" \
             --force
-        env:
-          RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
-          ADMIN_MAIL_BCC:       ${{ secrets.ADMIN_MAIL_BCC }}
-          MAIL_FROM:            ${{ secrets.MAIL_FROM }}
-          # Functions 側は CORS_ALLOWED_ORIGINS を読むので env 名を合わせる
-          CORS_ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
-          FRONTEND_BASE_URL:    ${{ secrets.FRONTEND_BASE_URL }}
