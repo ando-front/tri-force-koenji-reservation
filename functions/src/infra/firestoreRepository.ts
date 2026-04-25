@@ -377,36 +377,71 @@ export async function writeAuditLog(
 /**
  * 監査ログ一覧を取得する（管理者用）。
  * timestamp 降順、cursor は base64 エンコードされた logId。
+ *
+ * フィルタ（action / actor / targetId）と orderBy('timestamp') の組み合わせで
+ * Firestore の複合インデックスが必要になる事態を避けるため、ソートのみ
+ * Firestore に任せて等価フィルタはアプリ側で行う。1ページのデフォルトは
+ * 50件だが、フィルタによる脱落で空のページにならないよう必要に応じて
+ * 内部的に追加ページを取得する。
  */
+const AUDIT_LOG_FETCH_BATCH = 200;
+const MAX_AUDIT_LOG_SCAN    = 5_000;
+
 export async function listAuditLogs(
   query: ListAuditLogsQuery
 ): Promise<{ logs: AuditLog[]; nextCursor?: string }> {
   const { action, actor, targetId, limit = 50, cursor } = query;
 
-  let q: admin.firestore.Query = db().collection('auditLogs');
-  if (action)   q = q.where('action',   '==', action);
-  if (actor)    q = q.where('actor',    '==', actor);
-  if (targetId) q = q.where('targetId', '==', targetId);
+  const matchesFilter = (data: Partial<AuditLog>): boolean => {
+    if (action   && data.action   !== action)   return false;
+    if (actor    && data.actor    !== actor)    return false;
+    if (targetId && data.targetId !== targetId) return false;
+    return true;
+  };
 
-  q = q.orderBy('timestamp', 'desc').limit(limit + 1);
-
+  let lastDoc: admin.firestore.QueryDocumentSnapshot | admin.firestore.DocumentSnapshot | undefined;
   if (cursor) {
     const cursorDoc = await db()
       .collection('auditLogs')
       .doc(Buffer.from(cursor, 'base64').toString())
       .get();
-    if (cursorDoc.exists) q = q.startAfter(cursorDoc);
+    if (cursorDoc.exists) lastDoc = cursorDoc;
   }
 
-  const snap = await q.get();
-  const docs = snap.docs.slice(0, limit);
+  const matched: admin.firestore.QueryDocumentSnapshot[] = [];
+  let scanned = 0;
+  let hasMoreInFirestore = true;
+
+  while (matched.length < limit + 1 && scanned < MAX_AUDIT_LOG_SCAN && hasMoreInFirestore) {
+    let q: admin.firestore.Query = db()
+      .collection('auditLogs')
+      .orderBy('timestamp', 'desc')
+      .limit(AUDIT_LOG_FETCH_BATCH);
+    if (lastDoc) q = q.startAfter(lastDoc);
+
+    const snap = await q.get();
+    if (snap.empty) break;
+
+    for (const doc of snap.docs) {
+      scanned += 1;
+      if (matchesFilter(doc.data() as Partial<AuditLog>)) {
+        matched.push(doc);
+        if (matched.length >= limit + 1) break;
+      }
+    }
+
+    lastDoc = snap.docs[snap.docs.length - 1];
+    hasMoreInFirestore = snap.docs.length === AUDIT_LOG_FETCH_BATCH;
+  }
+
+  const docs = matched.slice(0, limit);
   const logs = docs.map((d) => ({
     logId: d.id,
     ...d.data(),
   })) as AuditLog[];
 
   let nextCursor: string | undefined;
-  if (snap.docs.length > limit) {
+  if (matched.length > limit) {
     nextCursor = Buffer.from(docs[docs.length - 1].id).toString('base64');
   }
 
