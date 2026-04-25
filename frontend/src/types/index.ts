@@ -19,6 +19,9 @@ export type {
   ListReservationsQuery,
   LookupReservationInput,
   PublicReservationView,
+  UpdateUsageGuideContentInput,
+  UsageGuideContent,
+  UsageGuideContentDoc,
 } from '@shared/types';
 
 export {
@@ -27,4 +30,6 @@ export {
   FacilityFormSchema,
   LookupReservationSchema,
   CancelReservationSchema,
+  UpdateUsageGuideContentSchema,
+  DEFAULT_USAGE_GUIDE_CONTENT,
 } from '@shared/types';

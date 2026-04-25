@@ -28,6 +28,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // サイト文言（利用案内など）: 読み取り自由、書き込みは Functions 経由のみ
+    match /siteContent/{docId} {
+      allow read:  if true;
+      allow write: if false;
+    }
+
     function isAdmin() {
       return request.auth != null
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));

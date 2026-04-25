@@ -13,6 +13,8 @@ import type {
   LookupReservationInput,
   PublicReservationView,
   Reservation,
+  UpdateUsageGuideContentInput,
+  UsageGuideContentDoc,
 } from '@shared/types';
 
 const BASE_URL = (import.meta.env.VITE_FUNCTIONS_BASE_URL as string) ?? '';
@@ -170,6 +172,24 @@ export function adminGetDashboardStats(): Promise<DashboardStats> {
   return request<{ stats: DashboardStats }>('/reservations/admin/stats', {}, true).then(
     (res) => res.stats,
   );
+}
+
+/** 利用案内コンテンツを取得（公開） */
+export function fetchUsageGuideContent(): Promise<UsageGuideContentDoc> {
+  return request<{ content: UsageGuideContentDoc }>('/content/usage-guide').then(
+    (res) => res.content,
+  );
+}
+
+/** 利用案内コンテンツを更新（管理者） */
+export function adminUpdateUsageGuideContent(
+  payload: UpdateUsageGuideContentInput,
+): Promise<UsageGuideContentDoc> {
+  return request<{ content: UsageGuideContentDoc }>(
+    '/content/usage-guide',
+    { method: 'PUT', body: JSON.stringify(payload) },
+    true,
+  ).then((res) => res.content);
 }
 
 /** 監査ログ一覧を取得（管理者） */

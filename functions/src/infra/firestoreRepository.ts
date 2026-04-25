@@ -8,9 +8,15 @@ import {
   ReservationStatus,
   AuditAction,
   AuditLog,
+  DEFAULT_USAGE_GUIDE_CONTENT,
   ListAuditLogsQuery,
   ListReservationsQuery,
+  UpdateUsageGuideContentInput,
+  UsageGuideContent,
+  UsageGuideContentDoc,
 } from '../../../shared/types';
+
+const USAGE_GUIDE_DOC = 'usage-guide';
 
 const db = () => admin.firestore();
 
@@ -358,6 +364,54 @@ export async function getReservationSummaryBySlot(
 }
 
 // ─── 監査ログ ──────────────────────────────────────────────────────────────────
+
+// ─── 利用案内コンテンツ ────────────────────────────────────────────────────────
+
+/**
+ * 利用案内ページの動的文言を取得する。文書がなければデフォルトを返す。
+ */
+export async function getUsageGuideContent(): Promise<UsageGuideContentDoc> {
+  const snap = await db().collection('siteContent').doc(USAGE_GUIDE_DOC).get();
+  if (!snap.exists) {
+    return { ...DEFAULT_USAGE_GUIDE_CONTENT };
+  }
+  const data = snap.data() ?? {};
+  const reservationSteps = Array.isArray(data.reservationSteps)
+    ? data.reservationSteps.filter((v): v is string => typeof v === 'string')
+    : DEFAULT_USAGE_GUIDE_CONTENT.reservationSteps;
+  const notes = Array.isArray(data.notes)
+    ? data.notes.filter((v): v is string => typeof v === 'string')
+    : DEFAULT_USAGE_GUIDE_CONTENT.notes;
+  return {
+    reservationSteps,
+    notes,
+    updatedAt: data.updatedAt,
+    updatedBy: typeof data.updatedBy === 'string' ? data.updatedBy : undefined,
+  };
+}
+
+/** 利用案内コンテンツを上書き保存する */
+export async function setUsageGuideContent(
+  input: UpdateUsageGuideContentInput,
+  actorUid: string
+): Promise<UsageGuideContentDoc> {
+  const ref = db().collection('siteContent').doc(USAGE_GUIDE_DOC);
+  const payload: UsageGuideContent & { updatedAt: unknown; updatedBy: string } = {
+    reservationSteps: input.reservationSteps,
+    notes:            input.notes,
+    updatedAt:        admin.firestore.FieldValue.serverTimestamp(),
+    updatedBy:        actorUid,
+  };
+  await ref.set(payload, { merge: false });
+  const saved = await ref.get();
+  const data = saved.data() ?? {};
+  return {
+    reservationSteps: data.reservationSteps as string[],
+    notes:            data.notes as string[],
+    updatedAt:        data.updatedAt,
+    updatedBy:        data.updatedBy as string,
+  };
+}
 
 export async function writeAuditLog(
   actor: string,

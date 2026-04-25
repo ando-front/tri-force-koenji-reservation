@@ -1,20 +1,22 @@
 import { Link } from 'react-router-dom';
-
-const reservationSteps = [
-  '施設と日付を選択し、空き時間帯を確認します。',
-  '表示されている予約者名を確認し、希望枠を選択します。',
-  'ニックネーム（任意）、メールアドレス、参加人数、利用目的を入力して送信します。',
-  '受付完了後、確認メールが届きます。',
-];
-
-const notes = [
-  '各時間帯には入力したニックネームを公開表示します。未入力の場合は「会員1」形式の表示名になります。',
-  'メンテナンス日と定休日は予約できません。空き枠が表示されない日は別日を選択してください。',
-  '利用人数は実際の参加予定人数を入力してください。',
-  '予約内容の確認や調整が必要な場合は、運営から連絡することがあります。',
-];
+import { useQuery } from '@tanstack/react-query';
+import { fetchUsageGuideContent } from '@/lib/api';
+import { DEFAULT_USAGE_GUIDE_CONTENT } from '@/types';
 
 export function UsageGuidePage() {
+  // 取得失敗時もデフォルト文言で表示できるよう、retry/staleTime を緩めに設定
+  const { data } = useQuery({
+    queryKey: ['content', 'usage-guide'],
+    queryFn:  fetchUsageGuideContent,
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const reservationSteps = data?.reservationSteps?.length
+    ? data.reservationSteps
+    : DEFAULT_USAGE_GUIDE_CONTENT.reservationSteps;
+  const notes = data?.notes ?? DEFAULT_USAGE_GUIDE_CONTENT.notes;
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-3xl px-4">
@@ -33,7 +35,7 @@ export function UsageGuidePage() {
             <h2 className="text-lg font-semibold text-gray-900">予約の流れ</h2>
             <ol className="mt-4 space-y-3 text-sm text-gray-700">
               {reservationSteps.map((step, index) => (
-                <li key={step} className="flex gap-3">
+                <li key={`${index}-${step}`} className="flex gap-3">
                   <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
                     {index + 1}
                   </span>
@@ -62,16 +64,18 @@ export function UsageGuidePage() {
             </p>
           </section>
 
-          <section className="card">
-            <h2 className="text-lg font-semibold text-gray-900">留意事項</h2>
-            <ul className="mt-4 space-y-3 text-sm leading-7 text-gray-700">
-              {notes.map((note) => (
-                <li key={note} className="rounded-md bg-gray-50 px-4 py-3">
-                  {note}
-                </li>
-              ))}
-            </ul>
-          </section>
+          {notes.length > 0 && (
+            <section className="card">
+              <h2 className="text-lg font-semibold text-gray-900">留意事項</h2>
+              <ul className="mt-4 space-y-3 text-sm leading-7 text-gray-700">
+                {notes.map((note, index) => (
+                  <li key={`${index}-${note}`} className="rounded-md bg-gray-50 px-4 py-3">
+                    {note}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="card">
             <h2 className="text-lg font-semibold text-gray-900">管理者運用メモ</h2>

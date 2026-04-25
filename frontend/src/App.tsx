@@ -7,6 +7,7 @@ import { UsageGuidePage }        from '@/pages/UsageGuidePage';
 import { AdminLoginPage }        from '@/pages/admin/AdminLoginPage';
 import { AdminDashboardPage }    from '@/pages/admin/AdminDashboardPage';
 import { AdminAuditLogPage }     from '@/pages/admin/AdminAuditLogPage';
+import { AdminContentPage }      from '@/pages/admin/AdminContentPage';
 import { AdminReservationList }  from '@/pages/admin/AdminReservationList';
 import { AdminReservationDetail } from '@/pages/admin/AdminReservationDetail';
 import { AdminFacilityManagement } from '@/pages/admin/AdminFacilityManagement';
@@ -47,6 +48,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <AdminAuditLogPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/content"
+            element={
+              <RequireAdmin>
+                <AdminContentPage />
               </RequireAdmin>
             }
           />

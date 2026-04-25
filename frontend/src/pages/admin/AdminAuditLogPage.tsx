@@ -11,6 +11,7 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   'reservation.confirmed': '予約確定',
   'reservation.cancelled': '予約キャンセル',
   'reservation.deleted':   '予約削除',
+  'content.updated':       'サイト文言更新',
 };
 
 const ACTION_COLOR: Record<AuditAction, string> = {
@@ -18,6 +19,7 @@ const ACTION_COLOR: Record<AuditAction, string> = {
   'reservation.confirmed': 'bg-green-100  text-green-800',
   'reservation.cancelled': 'bg-yellow-100 text-yellow-800',
   'reservation.deleted':   'bg-red-100    text-red-800',
+  'content.updated':       'bg-purple-100 text-purple-800',
 };
 
 const ACTOR_LABEL: Record<string, string> = {
@@ -196,15 +198,17 @@ export function AdminAuditLogPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">
-                        {log.action === 'reservation.deleted' ? (
-                          <span className="text-gray-400">{log.targetId.slice(0, 8).toUpperCase()}</span>
-                        ) : (
+                        {log.action.startsWith('reservation.') && log.action !== 'reservation.deleted' ? (
                           <Link
                             to={`/admin/reservations/${log.targetId}`}
                             className="text-brand-600 hover:underline"
                           >
                             {log.targetId.slice(0, 8).toUpperCase()}
                           </Link>
+                        ) : log.action === 'content.updated' ? (
+                          <span className="text-gray-600">{log.targetId}</span>
+                        ) : (
+                          <span className="text-gray-400">{log.targetId.slice(0, 8).toUpperCase()}</span>
                         )}
                       </td>
                       <td className="px-4 py-3">

@@ -131,7 +131,8 @@ export type AuditAction =
   | 'reservation.created'
   | 'reservation.confirmed'
   | 'reservation.cancelled'
-  | 'reservation.deleted';
+  | 'reservation.deleted'
+  | 'content.updated';
 
 export interface AuditLog {
   logId: string;
@@ -141,6 +142,48 @@ export interface AuditLog {
   payload: Record<string, unknown>;
   timestamp: unknown;
 }
+
+// ─── サイト文言（CMS） ────────────────────────────────────────────────────────
+
+/** デフォルトの利用案内文言。Firestoreに値がないときのフォールバック。 */
+export const DEFAULT_USAGE_GUIDE_CONTENT: UsageGuideContent = {
+  reservationSteps: [
+    '施設と日付を選択し、空き時間帯を確認します。',
+    '表示されている予約者名を確認し、希望枠を選択します。',
+    'ニックネーム（任意）、メールアドレス、参加人数、利用目的を入力して送信します。',
+    '受付完了後、確認メールが届きます。',
+  ],
+  notes: [
+    '各時間帯には入力したニックネームを公開表示します。未入力の場合は「会員1」形式の表示名になります。',
+    'メンテナンス日と定休日は予約できません。空き枠が表示されない日は別日を選択してください。',
+    '利用人数は実際の参加予定人数を入力してください。',
+    '予約内容の確認や調整が必要な場合は、運営から連絡することがあります。',
+  ],
+};
+
+export interface UsageGuideContent {
+  reservationSteps: string[];
+  notes: string[];
+}
+
+export interface UsageGuideContentDoc extends UsageGuideContent {
+  updatedAt?: unknown;
+  updatedBy?: string;
+}
+
+const ContentLineSchema = z
+  .string()
+  .trim()
+  .min(1, '空行は登録できません')
+  .max(500, '500文字以内で入力してください');
+
+/** PUT /content/usage-guide リクエストボディ */
+export const UpdateUsageGuideContentSchema = z.object({
+  reservationSteps: z.array(ContentLineSchema).min(1, '最低1件は登録してください').max(20, '最大20件までです'),
+  notes:            z.array(ContentLineSchema).min(0).max(20, '最大20件までです'),
+});
+
+export type UpdateUsageGuideContentInput = z.infer<typeof UpdateUsageGuideContentSchema>;
 
 // ─── APIリクエスト・レスポンス型 ───────────────────────────────────────────────
 
