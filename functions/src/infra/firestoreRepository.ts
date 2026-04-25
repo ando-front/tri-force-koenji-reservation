@@ -367,8 +367,27 @@ export async function getReservationSummaryBySlot(
 
 // ─── 利用案内コンテンツ ────────────────────────────────────────────────────────
 
+/** Firestore 上の値を `ContentLineSchema` 相当に正規化する */
+const MAX_CONTENT_LINES = 20;
+const MAX_CONTENT_LINE_LENGTH = 500;
+
+function sanitizeContentLines(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const cleaned: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string') continue;
+    const trimmed = item.trim().slice(0, MAX_CONTENT_LINE_LENGTH);
+    if (trimmed.length === 0) continue;
+    cleaned.push(trimmed);
+    if (cleaned.length >= MAX_CONTENT_LINES) break;
+  }
+  return cleaned;
+}
+
 /**
- * 利用案内ページの動的文言を取得する。文書がなければデフォルトを返す。
+ * 利用案内ページの動的文言を取得する。文書がない／配列が壊れているときは
+ * 各リスト単位でデフォルトにフォールバックする。空文字や20件超過などの
+ * 汚染データは公開ページに出さないよう正規化する。
  */
 export async function getUsageGuideContent(): Promise<UsageGuideContentDoc> {
   const snap = await db().collection('siteContent').doc(USAGE_GUIDE_DOC).get();
@@ -376,17 +395,14 @@ export async function getUsageGuideContent(): Promise<UsageGuideContentDoc> {
     return { ...DEFAULT_USAGE_GUIDE_CONTENT };
   }
   const data = snap.data() ?? {};
-  const reservationSteps = Array.isArray(data.reservationSteps)
-    ? data.reservationSteps.filter((v): v is string => typeof v === 'string')
-    : DEFAULT_USAGE_GUIDE_CONTENT.reservationSteps;
-  const notes = Array.isArray(data.notes)
-    ? data.notes.filter((v): v is string => typeof v === 'string')
-    : DEFAULT_USAGE_GUIDE_CONTENT.notes;
+  const sanitizedSteps = sanitizeContentLines(data.reservationSteps);
+  const sanitizedNotes = sanitizeContentLines(data.notes);
+
   return {
-    reservationSteps,
-    notes,
-    updatedAt: data.updatedAt,
-    updatedBy: typeof data.updatedBy === 'string' ? data.updatedBy : undefined,
+    reservationSteps: sanitizedSteps.length > 0 ? sanitizedSteps : DEFAULT_USAGE_GUIDE_CONTENT.reservationSteps,
+    notes:            Array.isArray(data.notes) ? sanitizedNotes : DEFAULT_USAGE_GUIDE_CONTENT.notes,
+    updatedAt:        data.updatedAt,
+    updatedBy:        typeof data.updatedBy === 'string' ? data.updatedBy : undefined,
   };
 }
 

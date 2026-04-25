@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { adminUpdateUsageGuideContent, fetchUsageGuideContent } from '@/lib/api';
+import { adminFetchUsageGuideContent, adminUpdateUsageGuideContent } from '@/lib/api';
 import { DEFAULT_USAGE_GUIDE_CONTENT, UpdateUsageGuideContentSchema } from '@/types';
 
 const MAX_LINES = 20;
@@ -24,8 +24,8 @@ export function AdminContentPage() {
   const qc = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['content', 'usage-guide'],
-    queryFn:  fetchUsageGuideContent,
+    queryKey: ['admin', 'content', 'usage-guide'],
+    queryFn:  adminFetchUsageGuideContent,
   });
 
   const [stepsText, setStepsText] = useState('');
@@ -44,7 +44,12 @@ export function AdminContentPage() {
   const mutation = useMutation({
     mutationFn: adminUpdateUsageGuideContent,
     onSuccess: (saved) => {
-      qc.setQueryData(['content', 'usage-guide'], saved);
+      // 管理用キャッシュ（updatedAt 含む）と公開用キャッシュ（steps/notes のみ）を両方更新
+      qc.setQueryData(['admin', 'content', 'usage-guide'], saved);
+      qc.setQueryData(['content', 'usage-guide'], {
+        reservationSteps: saved.reservationSteps,
+        notes:            saved.notes,
+      });
       setValidationError(null);
     },
   });

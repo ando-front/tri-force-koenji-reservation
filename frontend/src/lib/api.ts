@@ -174,11 +174,20 @@ export function adminGetDashboardStats(): Promise<DashboardStats> {
   );
 }
 
-/** 利用案内コンテンツを取得（公開） */
+/** 利用案内コンテンツを取得（公開・updatedAt等のメタ情報は含まない） */
 export function fetchUsageGuideContent(): Promise<UsageGuideContentDoc> {
   return request<{ content: UsageGuideContentDoc }>('/content/usage-guide').then(
     (res) => res.content,
   );
+}
+
+/** 利用案内コンテンツを取得（管理者・更新メタ情報含む） */
+export function adminFetchUsageGuideContent(): Promise<UsageGuideContentDoc> {
+  return request<{ content: UsageGuideContentDoc }>(
+    '/content/admin/usage-guide',
+    {},
+    true,
+  ).then((res) => res.content);
 }
 
 /** 利用案内コンテンツを更新（管理者） */
@@ -186,7 +195,7 @@ export function adminUpdateUsageGuideContent(
   payload: UpdateUsageGuideContentInput,
 ): Promise<UsageGuideContentDoc> {
   return request<{ content: UsageGuideContentDoc }>(
-    '/content/usage-guide',
+    '/content/admin/usage-guide',
     { method: 'PUT', body: JSON.stringify(payload) },
     true,
   ).then((res) => res.content);
