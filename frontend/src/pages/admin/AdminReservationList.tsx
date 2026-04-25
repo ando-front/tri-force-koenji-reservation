@@ -122,6 +122,9 @@ export function AdminReservationList() {
             <Link to="/admin/dashboard" className="text-sm text-brand-600 hover:underline">
               ダッシュボード
             </Link>
+            <Link to="/admin/audit-logs" className="text-sm text-brand-600 hover:underline">
+              監査ログ
+            </Link>
             <Link to="/admin/manual" className="text-sm text-brand-600 hover:underline">
               操作マニュアル
             </Link>

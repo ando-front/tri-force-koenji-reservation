@@ -1,5 +1,6 @@
 import { auth } from './firebase';
 import type {
+  AuditLog,
   Facility,
   CreateFacilityInput,
   UpdateFacilityInput,
@@ -7,6 +8,7 @@ import type {
   CancelReservationInput,
   CreateReservationResponse,
   DashboardStats,
+  ListAuditLogsQuery,
   ListReservationsQuery,
   LookupReservationInput,
   PublicReservationView,
@@ -167,6 +169,22 @@ export function adminListReservations(
 export function adminGetDashboardStats(): Promise<DashboardStats> {
   return request<{ stats: DashboardStats }>('/reservations/admin/stats', {}, true).then(
     (res) => res.stats,
+  );
+}
+
+/** 監査ログ一覧を取得（管理者） */
+export function adminListAuditLogs(
+  query: ListAuditLogsQuery,
+): Promise<{ logs: AuditLog[]; nextCursor: string | null }> {
+  const params = new URLSearchParams(
+    Object.fromEntries(
+      Object.entries(query).filter(([, v]) => v !== undefined && v !== '') as [string, string][],
+    ),
+  );
+  return request<{ logs: AuditLog[]; nextCursor: string | null }>(
+    `/audit-logs/admin?${params}`,
+    {},
+    true,
   );
 }
 

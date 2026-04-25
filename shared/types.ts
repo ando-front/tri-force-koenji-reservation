@@ -275,6 +275,15 @@ export interface ListReservationsQuery {
   cursor?: string; // Firestoreページネーションカーソル（base64エンコード）
 }
 
+/** 監査ログ一覧クエリパラメータ */
+export interface ListAuditLogsQuery {
+  action?: AuditAction;
+  actor?: string;
+  targetId?: string;
+  limit?: number;
+  cursor?: string;
+}
+
 // ─── 管理者ダッシュボード ─────────────────────────────────────────────────────
 
 export interface DashboardTodayStats {
