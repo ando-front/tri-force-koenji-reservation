@@ -1,4 +1,8 @@
-import { buildMyReservationUrl, buildReservationConfirmationEmail } from './notificationTemplate';
+import {
+  buildCancellationNotificationEmail,
+  buildMyReservationUrl,
+  buildReservationConfirmationEmail,
+} from './notificationTemplate';
 import type { Reservation } from '../../../shared/types';
 
 function makeReservation(overrides: Partial<Reservation> = {}): Reservation {
@@ -118,5 +122,68 @@ describe('buildReservationConfirmationEmail', () => {
     expect(text).toContain('備考    : 実メモ');
     expect(html).toContain('実メモ');
     expect(html).not.toContain('  実メモ  ');
+  });
+});
+
+describe('buildCancellationNotificationEmail', () => {
+  it('subject にキャンセル文言と8桁コードを含める', () => {
+    const r = makeReservation();
+    const { subject } = buildCancellationNotificationEmail(r, { triggeredBy: 'member' });
+    expect(subject).toContain('キャンセル');
+    expect(subject).toContain('ABC12345');
+  });
+
+  it('triggeredBy=member のときは「キャンセルしました」文言と再予約案内を入れる', () => {
+    const r = makeReservation();
+    const { text, html } = buildCancellationNotificationEmail(r, { triggeredBy: 'member' });
+    expect(text).toContain('予約をキャンセルしました');
+    expect(text).toContain('再予約');
+    expect(html).toContain('予約をキャンセルしました');
+    expect(html).not.toContain('運営側で');
+  });
+
+  it('triggeredBy=admin のときは「運営側でキャンセルしました」文言を入れる', () => {
+    const r = makeReservation();
+    const { text, html } = buildCancellationNotificationEmail(r, { triggeredBy: 'admin' });
+    expect(text).toContain('運営側で');
+    expect(html).toContain('運営側で予約をキャンセルしました');
+  });
+
+  it('cancelReason があれば本文・HTMLに表示する', () => {
+    const r = makeReservation();
+    const { text, html } = buildCancellationNotificationEmail(r, {
+      triggeredBy: 'admin',
+      cancelReason: '会員都合',
+    });
+    expect(text).toContain('キャンセル理由: 会員都合');
+    expect(html).toContain('キャンセル理由');
+    expect(html).toContain('会員都合');
+  });
+
+  it('cancelReason が空白のみなら理由行を含めない', () => {
+    const r = makeReservation();
+    const { text, html } = buildCancellationNotificationEmail(r, {
+      triggeredBy: 'member',
+      cancelReason: '   ',
+    });
+    expect(text).not.toMatch(/キャンセル理由/);
+    expect(html).not.toContain('キャンセル理由');
+  });
+
+  it('cancelReason のHTML特殊文字をエスケープする', () => {
+    const r = makeReservation();
+    const { html } = buildCancellationNotificationEmail(r, {
+      triggeredBy: 'member',
+      cancelReason: '<img src=x onerror=alert(1)>',
+    });
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+  });
+
+  it('memberName が空でも「会員 様」で挨拶を返す', () => {
+    const r = makeReservation({ memberName: '' });
+    const { text, html } = buildCancellationNotificationEmail(r, { triggeredBy: 'member' });
+    expect(text).toMatch(/^会員 様/);
+    expect(html).toContain('会員 様');
   });
 });

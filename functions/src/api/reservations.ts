@@ -13,7 +13,7 @@ import {
 import { isFacilityUnavailableOnDate, isWithinOperatingHours, calcEndTime } from '../domain/availability';
 import { todayJst } from '../domain/date';
 import { buildDashboardStats, buildDashboardWindows } from '../domain/dashboardStats';
-import { sendReservationConfirmation }          from '../domain/notification';
+import { sendCancellationNotification, sendReservationConfirmation } from '../domain/notification';
 import { rateLimitByIp, requireAdmin, getActor } from './middleware';
 import {
   CancelReservationSchema,
@@ -224,6 +224,12 @@ router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Respons
     facilityId: reservation.facilityId,
   });
 
+  // キャンセル通知メール（失敗しても続行）
+  sendCancellationNotification(updated, {
+    triggeredBy:  'member',
+    cancelReason: reason,
+  }).catch(() => { /* already logged */ });
+
   res.json({ success: true, reservation: toPublicView(updated) });
 });
 
@@ -297,6 +303,14 @@ router.patch('/admin/:id/status', requireAdmin, async (req: Request, res: Respon
 
     const action = status === 'confirmed' ? 'reservation.confirmed' : 'reservation.cancelled';
     await writeAuditLog(getActor(req), action, req.params.id, { status, cancelReason });
+
+    // キャンセル時は会員に通知（管理者起因）
+    if (status === 'cancelled') {
+      sendCancellationNotification(updated, {
+        triggeredBy:  'admin',
+        cancelReason: cancelReason ?? '',
+      }).catch(() => { /* already logged */ });
+    }
 
     res.json({ success: true, reservation: updated });
   } catch (err) {
