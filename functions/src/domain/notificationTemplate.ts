@@ -1,7 +1,11 @@
 import { Reservation } from '../../../shared/types';
 
-/** メールテンプレートの差出・宛先情報を除いた本文部分 */
-export interface ReservationConfirmationEmail {
+/**
+ * メールテンプレートの差出・宛先情報を除いた本文部分。
+ * 予約確認・キャンセル通知など複数のテンプレートで再利用するため
+ * 用途を限定しない汎用名にしている。
+ */
+export interface ReservationEmailContent {
   subject: string;
   text:    string;
   html:    string;
@@ -59,7 +63,7 @@ export function buildMyReservationUrl(code: string, baseUrl?: string): string {
 export function buildReservationConfirmationEmail(
   r: Reservation,
   options: { frontendBaseUrl?: string } = {}
-): ReservationConfirmationEmail {
+): ReservationEmailContent {
   const code = reservationCode(r);
   const greetingName = getReservationMailName(r.memberName);
   const myReservationUrl = buildMyReservationUrl(code, options.frontendBaseUrl);
@@ -193,7 +197,7 @@ export interface CancellationEmailOptions {
 export function buildCancellationNotificationEmail(
   r: Reservation,
   options: CancellationEmailOptions
-): ReservationConfirmationEmail {
+): ReservationEmailContent {
   const code = reservationCode(r);
   const greetingName = getReservationMailName(r.memberName);
   const reason = options.cancelReason?.trim() ?? '';

@@ -121,8 +121,8 @@ router.post('/', async (req: Request, res: Response) => {
       facilityId: reservation.facilityId,
     });
 
-    // メール送信（非同期・失敗しても続行）
-    sendReservationConfirmation(reservation).catch(() => {/* already logged */});
+    // メール送信は send 関数側で例外を握り潰すので fire-and-forget で良い
+    void sendReservationConfirmation(reservation);
 
     res.status(201).json({
       success:       true,
@@ -224,11 +224,11 @@ router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Respons
     facilityId: reservation.facilityId,
   });
 
-  // キャンセル通知メール（失敗しても続行）
-  sendCancellationNotification(updated, {
+  // キャンセル通知メール（send 側で例外を握り潰す fire-and-forget）
+  void sendCancellationNotification(updated, {
     triggeredBy:  'member',
     cancelReason: reason,
-  }).catch(() => { /* already logged */ });
+  });
 
   res.json({ success: true, reservation: toPublicView(updated) });
 });
@@ -304,12 +304,12 @@ router.patch('/admin/:id/status', requireAdmin, async (req: Request, res: Respon
     const action = status === 'confirmed' ? 'reservation.confirmed' : 'reservation.cancelled';
     await writeAuditLog(getActor(req), action, req.params.id, { status, cancelReason });
 
-    // キャンセル時は会員に通知（管理者起因）
+    // キャンセル時は会員に通知（管理者起因・send 側で例外を握り潰す）
     if (status === 'cancelled') {
-      sendCancellationNotification(updated, {
+      void sendCancellationNotification(updated, {
         triggeredBy:  'admin',
         cancelReason: cancelReason ?? '',
-      }).catch(() => { /* already logged */ });
+      });
     }
 
     res.json({ success: true, reservation: updated });

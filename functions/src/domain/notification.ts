@@ -3,7 +3,7 @@ import { Reservation } from '../../../shared/types';
 import {
   buildCancellationNotificationEmail,
   buildReservationConfirmationEmail,
-  CancellationTrigger,
+  CancellationEmailOptions,
 } from './notificationTemplate';
 
 const FROM_ADDRESS = process.env.MAIL_FROM ?? 'noreply@tri-force-koenji.jp';
@@ -43,7 +43,7 @@ export async function sendReservationConfirmation(reservation: Reservation): Pro
  */
 export async function sendCancellationNotification(
   reservation: Reservation,
-  options: { triggeredBy: CancellationTrigger; cancelReason?: string }
+  options: CancellationEmailOptions
 ): Promise<void> {
   try {
     const apiKey = process.env.RESEND_API_KEY;
