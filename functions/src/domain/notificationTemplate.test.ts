@@ -35,6 +35,27 @@ describe('buildMyReservationUrl', () => {
   it('FRONTEND_BASE_URL が未指定なら相対パスを返す', () => {
     expect(buildMyReservationUrl('ABC12345')).toBe('/my-reservation?code=ABC12345');
   });
+
+  it('javascript: などの非http(s)スキームは相対パスにフォールバックする', () => {
+    expect(buildMyReservationUrl('ABC12345', 'javascript:alert(1)'))
+      .toBe('/my-reservation?code=ABC12345');
+    expect(buildMyReservationUrl('ABC12345', 'data:text/html,foo'))
+      .toBe('/my-reservation?code=ABC12345');
+  });
+
+  it('パースできない値は相対パスにフォールバックする', () => {
+    expect(buildMyReservationUrl('ABC12345', 'not-a-url')).toBe('/my-reservation?code=ABC12345');
+    expect(buildMyReservationUrl('ABC12345', '')).toBe('/my-reservation?code=ABC12345');
+  });
+
+  it('path/query/hash を含む baseUrl は誤設定とみなして相対パスにフォールバックする', () => {
+    expect(buildMyReservationUrl('ABC12345', 'https://example.com/sub/path'))
+      .toBe('/my-reservation?code=ABC12345');
+    expect(buildMyReservationUrl('ABC12345', 'https://example.com?x=1'))
+      .toBe('/my-reservation?code=ABC12345');
+    expect(buildMyReservationUrl('ABC12345', 'https://example.com#frag'))
+      .toBe('/my-reservation?code=ABC12345');
+  });
 });
 
 describe('buildReservationConfirmationEmail', () => {
@@ -82,5 +103,20 @@ describe('buildReservationConfirmationEmail', () => {
     const { text, html } = buildReservationConfirmationEmail(r, { frontendBaseUrl: baseUrl });
     expect(text).not.toMatch(/備考\s*:/);
     expect(html).not.toContain('>備考<');
+  });
+
+  it('remarks が空白のみのときも備考行を含めない', () => {
+    const r = makeReservation({ remarks: '   \n\t  ' });
+    const { text, html } = buildReservationConfirmationEmail(r, { frontendBaseUrl: baseUrl });
+    expect(text).not.toMatch(/備考\s*:/);
+    expect(html).not.toContain('>備考<');
+  });
+
+  it('remarks の前後空白は除去して表示する', () => {
+    const r = makeReservation({ remarks: '  実メモ  ' });
+    const { text, html } = buildReservationConfirmationEmail(r, { frontendBaseUrl: baseUrl });
+    expect(text).toContain('備考    : 実メモ');
+    expect(html).toContain('実メモ');
+    expect(html).not.toContain('  実メモ  ');
   });
 });

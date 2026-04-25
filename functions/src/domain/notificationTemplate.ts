@@ -26,13 +26,30 @@ function reservationCode(r: Reservation): string {
 
 /**
  * 会員向け予約確認・キャンセル画面への URL を生成する。
- * FRONTEND_BASE_URL が未設定のときは path だけを返す（UIから辿れる）。
+ * FRONTEND_BASE_URL が不正・未設定のときは相対パスにフォールバックする。
+ *
+ * baseUrl は http(s) スキームの origin（scheme + host + port）であることを期待する。
+ * パスやクエリを含む baseUrl、または javascript: などの非安全スキームが混入した場合は
+ * 危険なリンクをメールに埋め込まないため、相対パスへ落とす。
  */
 export function buildMyReservationUrl(code: string, baseUrl?: string): string {
   const path = `/my-reservation?code=${encodeURIComponent(code)}`;
   if (!baseUrl) return path;
-  const trimmed = baseUrl.replace(/\/+$/, '');
-  return `${trimmed}${path}`;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    return path;
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return path;
+  // origin に余計な path/query/hash が付いている baseUrl は誤設定とみなす
+  if (parsed.pathname !== '/' && parsed.pathname !== '') return path;
+  if (parsed.search) return path;
+  if (parsed.hash)   return path;
+
+  return `${parsed.origin}${path}`;
 }
 
 /**
@@ -47,6 +64,8 @@ export function buildReservationConfirmationEmail(
   const greetingName = getReservationMailName(r.memberName);
   const myReservationUrl = buildMyReservationUrl(code, options.frontendBaseUrl);
   const subject = `【Tri-force Koenji】施設予約を受け付けました（予約番号: ${code}）`;
+  // 空白のみの備考は本文に出さない
+  const remarks = r.remarks?.trim() ?? '';
 
   const textLines: string[] = [
     `${greetingName} 様`,
@@ -61,7 +80,7 @@ export function buildReservationConfirmationEmail(
     `参加人数: ${r.participants}名`,
     `利用目的: ${r.purpose}`,
   ];
-  if (r.remarks) textLines.push(`備考    : ${r.remarks}`);
+  if (remarks) textLines.push(`備考    : ${remarks}`);
   textLines.push(
     '━━━━━━━━━━━━━━━━',
     '',
@@ -83,7 +102,7 @@ export function buildReservationConfirmationEmail(
     ['参加人数', `${r.participants}名`],
     ['利用目的', r.purpose],
   ];
-  if (r.remarks) details.push(['備考', r.remarks]);
+  if (remarks) details.push(['備考', remarks]);
 
   const detailRows = details
     .map(
