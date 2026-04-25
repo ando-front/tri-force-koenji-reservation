@@ -28,6 +28,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // サイト文言: 公開対象のドキュメントのみ読み取り自由。書き込みは Functions 経由のみ。
+    // 公開すべきドキュメントが増えたら明示的に追加する（誤って機微情報を公開しないため）。
+    match /siteContent/usage-guide {
+      allow read:  if true;
+      allow write: if false;
+    }
+    match /siteContent/{docId} {
+      allow read:  if false;
+      allow write: if false;
+    }
+
     function isAdmin() {
       return request.auth != null
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
