@@ -1,7 +1,11 @@
 import { Reservation } from '../../../shared/types';
 
-/** メールテンプレートの差出・宛先情報を除いた本文部分 */
-export interface ReservationConfirmationEmail {
+/**
+ * メールテンプレートの差出・宛先情報を除いた本文部分。
+ * 予約確認・キャンセル通知など複数のテンプレートで再利用するため
+ * 用途を限定しない汎用名にしている。
+ */
+export interface ReservationEmailContent {
   subject: string;
   text:    string;
   html:    string;
@@ -59,7 +63,7 @@ export function buildMyReservationUrl(code: string, baseUrl?: string): string {
 export function buildReservationConfirmationEmail(
   r: Reservation,
   options: { frontendBaseUrl?: string } = {}
-): ReservationConfirmationEmail {
+): ReservationEmailContent {
   const code = reservationCode(r);
   const greetingName = getReservationMailName(r.memberName);
   const myReservationUrl = buildMyReservationUrl(code, options.frontendBaseUrl);
@@ -153,6 +157,126 @@ export function buildReservationConfirmationEmail(
                 リンクが開けない場合は以下のURLをブラウザに貼り付けてください:<br/>
                 <span style="word-break:break-all;">${escapeHtml(myReservationUrl)}</span>
               </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px 32px;border-top:1px solid #f3f4f6;font-size:12px;color:#6b7280;line-height:1.6;">
+              このメールは自動送信です。お心当たりのない場合はお手数ですが本メールを破棄してください。<br/>
+              Tri-force Koenji
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return {
+    subject,
+    text: textLines.join('\n'),
+    html,
+  };
+}
+
+// ─── キャンセル通知 ────────────────────────────────────────────────────────────
+
+/** キャンセル通知の発行元 */
+export type CancellationTrigger = 'member' | 'admin';
+
+export interface CancellationEmailOptions {
+  triggeredBy: CancellationTrigger;
+  /** 管理者が入力した／会員が入力した補足理由（接頭辞 [会員キャンセル] などは含めなくてよい） */
+  cancelReason?: string;
+}
+
+/**
+ * 予約キャンセル通知メールの件名・本文・HTML を生成する純関数。
+ * 会員セルフキャンセルと管理者によるキャンセルで文面を出し分ける。
+ */
+export function buildCancellationNotificationEmail(
+  r: Reservation,
+  options: CancellationEmailOptions
+): ReservationEmailContent {
+  const code = reservationCode(r);
+  const greetingName = getReservationMailName(r.memberName);
+  const reason = options.cancelReason?.trim() ?? '';
+  const subject = `【Tri-force Koenji】施設予約をキャンセルしました（予約番号: ${code}）`;
+
+  const intro =
+    options.triggeredBy === 'member'
+      ? '以下の予約をキャンセルしました。再予約をご希望の場合は、もう一度予約ページからお手続きください。'
+      : '運営側で以下の予約をキャンセルしました。お心当たりがない場合や日程の調整が必要な場合は運営までご連絡ください。';
+
+  const textLines: string[] = [
+    `${greetingName} 様`,
+    '',
+    intro,
+    '',
+    '━━━━━━━━━━━━━━━━',
+    `予約番号: ${code}`,
+    `施設名  : ${r.facilityName}`,
+    `利用日  : ${r.date}`,
+    `時間    : ${r.startTime} 〜 ${r.endTime}`,
+    `参加人数: ${r.participants}名`,
+    `利用目的: ${r.purpose}`,
+  ];
+  if (reason) textLines.push(`キャンセル理由: ${reason}`);
+  textLines.push(
+    '━━━━━━━━━━━━━━━━',
+    '',
+    'Tri-force Koenji',
+  );
+
+  const details: [string, string][] = [
+    ['予約番号', code],
+    ['施設名',   r.facilityName],
+    ['利用日',   r.date],
+    ['時間',     `${r.startTime} 〜 ${r.endTime}`],
+    ['参加人数', `${r.participants}名`],
+    ['利用目的', r.purpose],
+  ];
+  if (reason) details.push(['キャンセル理由', reason]);
+
+  const detailRows = details
+    .map(
+      ([label, value]) => `
+        <tr>
+          <th style="padding:8px 12px;text-align:left;font-weight:500;color:#6b7280;white-space:nowrap;vertical-align:top;">${escapeHtml(label)}</th>
+          <td style="padding:8px 12px;color:#111827;word-break:break-all;">${escapeHtml(value)}</td>
+        </tr>`
+    )
+    .join('');
+
+  const heading =
+    options.triggeredBy === 'member'
+      ? '予約をキャンセルしました'
+      : '運営側で予約をキャンセルしました';
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f9fafb;font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Noto Sans JP',Meiryo,sans-serif;color:#111827;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f9fafb;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="560" style="max-width:560px;background-color:#ffffff;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+          <tr>
+            <td style="padding:24px 32px 8px 32px;border-bottom:1px solid #f3f4f6;">
+              <p style="margin:0;font-size:12px;color:#6b7280;letter-spacing:0.1em;">TRI-FORCE KOENJI</p>
+              <h1 style="margin:4px 0 0 0;font-size:20px;color:#111827;">${escapeHtml(heading)}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;">
+              <p style="margin:0 0 12px 0;font-size:14px;line-height:1.6;">${escapeHtml(greetingName)} 様</p>
+              <p style="margin:0 0 16px 0;font-size:14px;line-height:1.6;">${escapeHtml(intro)}</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;background-color:#f9fafb;border-radius:6px;font-size:14px;margin:8px 0 0 0;">
+                ${detailRows}
+              </table>
             </td>
           </tr>
           <tr>
