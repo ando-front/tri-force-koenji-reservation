@@ -6,6 +6,7 @@ import cors from 'cors';
 import facilitiesRouter    from './api/facilities';
 import availabilityRouter  from './api/availability';
 import reservationsRouter  from './api/reservations';
+import auditLogsRouter     from './api/auditLogs';
 import { errorHandler }    from './api/middleware';
 
 // Firebase Admin SDK の初期化（Cloud Functions環境では資格情報を自動取得）
@@ -43,6 +44,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use('/facilities',   facilitiesRouter);
 app.use('/availability', availabilityRouter);
 app.use('/reservations', reservationsRouter);
+app.use('/audit-logs',   auditLogsRouter);
 
 // 管理者エクスポートルートは /reservations 内に定義済み
 

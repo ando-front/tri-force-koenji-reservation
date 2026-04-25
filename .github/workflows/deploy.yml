@@ -79,3 +79,4 @@ jobs:
           ADMIN_MAIL_BCC:    ${{ secrets.ADMIN_MAIL_BCC }}
           MAIL_FROM:         ${{ secrets.MAIL_FROM }}
           ALLOWED_ORIGINS:   ${{ secrets.ALLOWED_ORIGINS }}
+          FRONTEND_BASE_URL: ${{ secrets.FRONTEND_BASE_URL }}

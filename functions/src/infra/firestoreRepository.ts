@@ -7,6 +7,8 @@ import {
   Reservation,
   ReservationStatus,
   AuditAction,
+  AuditLog,
+  ListAuditLogsQuery,
   ListReservationsQuery,
 } from '../../../shared/types';
 
@@ -370,4 +372,43 @@ export async function writeAuditLog(
     payload,
     timestamp: admin.firestore.FieldValue.serverTimestamp(),
   });
+}
+
+/**
+ * 監査ログ一覧を取得する（管理者用）。
+ * timestamp 降順、cursor は base64 エンコードされた logId。
+ */
+export async function listAuditLogs(
+  query: ListAuditLogsQuery
+): Promise<{ logs: AuditLog[]; nextCursor?: string }> {
+  const { action, actor, targetId, limit = 50, cursor } = query;
+
+  let q: admin.firestore.Query = db().collection('auditLogs');
+  if (action)   q = q.where('action',   '==', action);
+  if (actor)    q = q.where('actor',    '==', actor);
+  if (targetId) q = q.where('targetId', '==', targetId);
+
+  q = q.orderBy('timestamp', 'desc').limit(limit + 1);
+
+  if (cursor) {
+    const cursorDoc = await db()
+      .collection('auditLogs')
+      .doc(Buffer.from(cursor, 'base64').toString())
+      .get();
+    if (cursorDoc.exists) q = q.startAfter(cursorDoc);
+  }
+
+  const snap = await q.get();
+  const docs = snap.docs.slice(0, limit);
+  const logs = docs.map((d) => ({
+    logId: d.id,
+    ...d.data(),
+  })) as AuditLog[];
+
+  let nextCursor: string | undefined;
+  if (snap.docs.length > limit) {
+    nextCursor = Buffer.from(docs[docs.length - 1].id).toString('base64');
+  }
+
+  return { logs, nextCursor };
 }
