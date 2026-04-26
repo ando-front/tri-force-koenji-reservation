@@ -79,15 +79,13 @@ jobs:
           FRONTEND_BASE_URL:    ${{ secrets.FRONTEND_BASE_URL }}
         run: |
           set -euo pipefail
-          # 必須secretsが欠落していると staging のメール送信が無音失敗するため fail-fast する。
-          # FRONTEND_BASE_URL は staging だと未設定でもメールリンクが相対パスになる
-          # だけで送信自体は成功するため、警告のみに留める（本番側は deploy.yml で必須）。
-          : "${FIREBASE_PROJECT_ID:?GitHub Secret FIREBASE_PROJECT_ID is missing}"
-          : "${RESEND_API_KEY:?GitHub Secret RESEND_API_KEY is missing}"
-          : "${MAIL_FROM:?GitHub Secret MAIL_FROM is missing}"
-          if [ -z "${FRONTEND_BASE_URL:-}" ]; then
-            echo "::warning::FRONTEND_BASE_URL is not set; cancellation/confirmation email links will fall back to relative paths"
-          fi
+          # staging は本番に比べて secrets の整備状況が緩いことを許容するため、
+          # 必須 secret 欠落も warn のみとする（本番側は deploy.yml で fail-fast）。
+          warn() { echo "::warning::$1"; }
+          : "${FIREBASE_PROJECT_ID:?GitHub Secret FIREBASE_PROJECT_ID is missing (required for staging deploy target)}"
+          [ -n "${RESEND_API_KEY:-}" ]    || warn "RESEND_API_KEY is not set in staging; reservation emails will be skipped silently"
+          [ -n "${MAIL_FROM:-}" ]         || warn "MAIL_FROM is not set in staging; Resend will reject the request if RESEND_API_KEY is set"
+          [ -n "${FRONTEND_BASE_URL:-}" ] || warn "FRONTEND_BASE_URL is not set in staging; email cancel links will fall back to relative paths"
 
           umask 077
           {
