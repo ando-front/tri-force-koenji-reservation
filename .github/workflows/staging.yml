@@ -78,23 +78,43 @@ jobs:
           CORS_ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
           FRONTEND_BASE_URL:    ${{ secrets.FRONTEND_BASE_URL }}
         run: |
-          set -euo pipefail
-          # staging は本番に比べて secrets の整備状況が緩いことを許容するため、
-          # 必須 secret 欠落も warn のみとする（本番側は deploy.yml で fail-fast）。
+          set -uo pipefail
+          # 必須 secret 欠落も全て warn のみとし、なぜ deploy が失敗するか
+          # 切り分けやすくする（本番側は deploy.yml で fail-fast）。
           warn() { echo "::warning::$1"; }
-          : "${FIREBASE_PROJECT_ID:?GitHub Secret FIREBASE_PROJECT_ID is missing (required for staging deploy target)}"
-          [ -n "${RESEND_API_KEY:-}" ]    || warn "RESEND_API_KEY is not set in staging; reservation emails will be skipped silently"
-          [ -n "${MAIL_FROM:-}" ]         || warn "MAIL_FROM is not set in staging; Resend will reject the request if RESEND_API_KEY is set"
-          [ -n "${FRONTEND_BASE_URL:-}" ] || warn "FRONTEND_BASE_URL is not set in staging; email cancel links will fall back to relative paths"
+          [ -n "${FIREBASE_PROJECT_ID:-}" ] || warn "FIREBASE_PROJECT_ID is not set in staging; deploy will fail"
+          [ -n "${RESEND_API_KEY:-}" ]      || warn "RESEND_API_KEY is not set in staging; reservation emails will be skipped silently"
+          [ -n "${MAIL_FROM:-}" ]           || warn "MAIL_FROM is not set in staging; Resend will reject if RESEND_API_KEY is set"
+          [ -n "${FRONTEND_BASE_URL:-}" ]   || warn "FRONTEND_BASE_URL is not set in staging; email cancel links will fall back to relative paths"
+
+          # FIREBASE_PROJECT_ID が空だと .env. というファイル名になり混乱するので
+          # その場合は .env だけを書き出す（firebase は default project を使う）。
+          ENV_FILE=".env"
+          if [ -n "${FIREBASE_PROJECT_ID:-}" ]; then
+            ENV_FILE=".env.${FIREBASE_PROJECT_ID}"
+          fi
+          echo "Writing runtime env to functions/${ENV_FILE}"
+
+          # 切り分け用: 各 secret の有無を出力（値は伏字）
+          echo "::group::Secret presence check"
+          for v in FIREBASE_PROJECT_ID RESEND_API_KEY MAIL_FROM ADMIN_MAIL_BCC CORS_ALLOWED_ORIGINS FRONTEND_BASE_URL; do
+            value="${!v:-}"
+            if [ -n "$value" ]; then
+              echo "  $v: <set, length=${#value}>"
+            else
+              echo "  $v: <empty>"
+            fi
+          done
+          echo "::endgroup::"
 
           umask 077
           {
-            printf 'RESEND_API_KEY=%s\n'       "$RESEND_API_KEY"
-            printf 'ADMIN_MAIL_BCC=%s\n'       "$ADMIN_MAIL_BCC"
-            printf 'MAIL_FROM=%s\n'            "$MAIL_FROM"
-            printf 'CORS_ALLOWED_ORIGINS=%s\n' "$CORS_ALLOWED_ORIGINS"
-            printf 'FRONTEND_BASE_URL=%s\n'    "$FRONTEND_BASE_URL"
-          } > ".env.${FIREBASE_PROJECT_ID}"
+            printf 'RESEND_API_KEY=%s\n'       "${RESEND_API_KEY:-}"
+            printf 'ADMIN_MAIL_BCC=%s\n'       "${ADMIN_MAIL_BCC:-}"
+            printf 'MAIL_FROM=%s\n'            "${MAIL_FROM:-}"
+            printf 'CORS_ALLOWED_ORIGINS=%s\n' "${CORS_ALLOWED_ORIGINS:-}"
+            printf 'FRONTEND_BASE_URL=%s\n'    "${FRONTEND_BASE_URL:-}"
+          } > "$ENV_FILE"
 
       - name: Deploy Functions to staging project
         run: |
