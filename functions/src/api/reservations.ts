@@ -51,8 +51,13 @@ function toPublicView(reservation: Reservation): PublicReservationView {
 
 // ─── 公開API ──────────────────────────────────────────────────────────────────
 
+// 公開予約登録のレートリミット。10分あたり 10件 / IP までに制限する。
+// 同一IP配下で複数会員が連続登録するケース（家族・知人など）も
+// 排他しないよう、容量はやや緩めに設定。
+const createRateLimit = rateLimitByIp({ windowMs: 10 * 60 * 1000, max: 10, key: 'reservations-create' });
+
 /** POST /reservations — 予約登録（認証不要） */
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', createRateLimit, async (req: Request, res: Response) => {
   // バリデーション
   const parsed = CreateReservationSchema.safeParse(req.body);
   if (!parsed.success) {
