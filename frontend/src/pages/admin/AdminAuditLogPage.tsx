@@ -7,19 +7,21 @@ import { adminListAuditLogs } from '@/lib/api';
 import type { AuditAction, AuditLog, ListAuditLogsQuery } from '@/types';
 
 const ACTION_LABEL: Record<AuditAction, string> = {
-  'reservation.created':   '予約作成',
-  'reservation.confirmed': '予約確定',
-  'reservation.cancelled': '予約キャンセル',
-  'reservation.deleted':   '予約削除',
-  'content.updated':       'サイト文言更新',
+  'reservation.created':       '予約作成',
+  'reservation.confirmed':     '予約確定',
+  'reservation.cancelled':     '予約キャンセル',
+  'reservation.deleted':       '予約削除',
+  'reservation.reminder_sent': 'リマインダー送信',
+  'content.updated':           'サイト文言更新',
 };
 
 const ACTION_COLOR: Record<AuditAction, string> = {
-  'reservation.created':   'bg-blue-100   text-blue-800',
-  'reservation.confirmed': 'bg-green-100  text-green-800',
-  'reservation.cancelled': 'bg-yellow-100 text-yellow-800',
-  'reservation.deleted':   'bg-red-100    text-red-800',
-  'content.updated':       'bg-purple-100 text-purple-800',
+  'reservation.created':       'bg-blue-100    text-blue-800',
+  'reservation.confirmed':     'bg-green-100   text-green-800',
+  'reservation.cancelled':     'bg-yellow-100  text-yellow-800',
+  'reservation.deleted':       'bg-red-100     text-red-800',
+  'reservation.reminder_sent': 'bg-indigo-100  text-indigo-800',
+  'content.updated':           'bg-purple-100  text-purple-800',
 };
 
 const ACTOR_LABEL: Record<string, string> = {
