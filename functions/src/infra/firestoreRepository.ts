@@ -279,6 +279,66 @@ export async function deleteReservation(reservationId: string): Promise<void> {
 }
 
 /**
+ * 指定メールアドレスのアクティブ予約（pending/confirmed × 未来日）を返す。
+ * 会員セルフサービスの「メールで一覧」用途。プライバシー保護のため
+ * cancelled / 過去日は返さない。emailLower 正規化フィールドを優先で
+ * 検索し、未設定の旧データには email 完全一致でフォールバック。
+ */
+export async function listActiveReservationsByEmail(
+  email: string,
+  todayDate: string,
+  hardLimit = 50
+): Promise<Reservation[]> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const trimmedEmail    = email.trim();
+
+  // Step 1: emailLower 等価検索（新規予約向け）
+  const primary = await db()
+    .collection('reservations')
+    .where('emailLower', '==', normalizedEmail)
+    .limit(hardLimit)
+    .get();
+
+  // Step 2: emailLower 未設定の旧予約向けフォールバック
+  const fallbackCandidates = Array.from(
+    new Set([trimmedEmail, normalizedEmail])
+  ).filter((v) => v.length > 0);
+
+  const fallbackSnaps = await Promise.all(
+    fallbackCandidates.map((c) =>
+      db()
+        .collection('reservations')
+        .where('email', '==', c)
+        .limit(hardLimit)
+        .get()
+    )
+  );
+
+  const seen = new Set<string>();
+  const merged: Reservation[] = [];
+  for (const doc of primary.docs) {
+    if (seen.has(doc.id)) continue;
+    seen.add(doc.id);
+    merged.push({ ...doc.data(), reservationId: doc.id } as Reservation);
+  }
+  for (const snap of fallbackSnaps) {
+    for (const doc of snap.docs) {
+      if (seen.has(doc.id)) continue;
+      seen.add(doc.id);
+      merged.push({ ...doc.data(), reservationId: doc.id } as Reservation);
+    }
+  }
+
+  // アクティブ予約のみに絞り、利用日昇順で返す
+  return merged
+    .filter((r) => (r.status === 'pending' || r.status === 'confirmed') && r.date >= todayDate)
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.startTime.localeCompare(b.startTime);
+    });
+}
+
+/**
  * 指定日の確定予約をすべて取得する（リマインダー送信用途）。
  * Firestore の単一フィールドインデックスのみで動く（date, status の equality）。
  */

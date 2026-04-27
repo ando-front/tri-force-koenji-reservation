@@ -3,6 +3,7 @@ import {
   createReservation,
   findReservationByCodeAndEmail,
   getFacility,
+  listActiveReservationsByEmail,
   listFacilitiesAdmin,
   listReservations,
   listReservationsByDateRange,
@@ -19,6 +20,7 @@ import {
   CancelReservationSchema,
   CreateReservationSchema,
   LookupReservationSchema,
+  LookupReservationsByEmailSchema,
   PublicReservationView,
   Reservation,
   UpdateStatusSchema,
@@ -179,6 +181,24 @@ router.post('/lookup', lookupRateLimit, async (req: Request, res: Response) => {
   }
 
   res.json({ success: true, reservation: toPublicView(reservation) });
+});
+
+/** POST /reservations/lookup-by-email — メールアドレスから自分のアクティブ予約一覧を取得 */
+router.post('/lookup-by-email', lookupRateLimit, async (req: Request, res: Response) => {
+  const parsed = LookupReservationsByEmailSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: '入力内容を確認してください' },
+    });
+    return;
+  }
+
+  const reservations = await listActiveReservationsByEmail(parsed.data.email, todayJst());
+  res.json({
+    success: true,
+    reservations: reservations.map(toPublicView),
+  });
 });
 
 /** POST /reservations/lookup/cancel — 会員自身が予約をキャンセルする */

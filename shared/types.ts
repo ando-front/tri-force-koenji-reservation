@@ -266,6 +266,13 @@ export const CancelReservationSchema = z.object({
 
 export type CancelReservationInput = z.infer<typeof CancelReservationSchema>;
 
+/** POST /reservations/lookup-by-email リクエストボディ */
+export const LookupReservationsByEmailSchema = z.object({
+  email: NormalizedEmailSchema,
+});
+
+export type LookupReservationsByEmailInput = z.infer<typeof LookupReservationsByEmailSchema>;
+
 /** 会員向けに返却する予約情報（機微情報を除く） */
 export interface PublicReservationView {
   reservationCode: string;

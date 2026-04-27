@@ -11,6 +11,7 @@ import type {
   ListAuditLogsQuery,
   ListReservationsQuery,
   LookupReservationInput,
+  LookupReservationsByEmailInput,
   PublicReservationView,
   Reservation,
   UpdateUsageGuideContentInput,
@@ -119,6 +120,16 @@ export function cancelReservationByMember(
     method: 'POST',
     body:   JSON.stringify(payload),
   }).then((res) => res.reservation);
+}
+
+/** メールアドレスから自分のアクティブ予約一覧を取得（会員向け） */
+export function lookupReservationsByEmail(
+  payload: LookupReservationsByEmailInput,
+): Promise<PublicReservationView[]> {
+  return request<{ reservations: PublicReservationView[] }>('/reservations/lookup-by-email', {
+    method: 'POST',
+    body:   JSON.stringify(payload),
+  }).then((res) => res.reservations);
 }
 
 // ---- 管理者 API --------------------------------------------------------------
