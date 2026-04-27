@@ -281,7 +281,7 @@ router.get('/admin/:id', requireAdmin, async (req: Request, res: Response) => {
     res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '予約が見つかりません' } });
     return;
   }
-  res.json({ success: true, reservation: { reservationId: snap.id, ...snap.data() } });
+  res.json({ success: true, reservation: { ...snap.data(), reservationId: snap.id } });
   void reservations; // suppress unused warning
 });
 

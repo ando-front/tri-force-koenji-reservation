@@ -20,8 +20,9 @@ export interface ReminderProcessingResult {
 }
 
 /**
- * 指定日のリマインダー送信処理を実行する純関数。
- * Firestore / Resend / Logger との結合は依存注入で外に追い出してテスト可能にする。
+ * 指定日のリマインダー送信処理を実行する。
+ * Firestore / Resend との結合は依存注入で外に追い出して単体テスト可能にしている。
+ * （`console.error` への副作用は持つため厳密には純関数ではない。）
  */
 export async function processReminders(
   date: string,
@@ -51,18 +52,24 @@ export async function processReminders(
     }
     try {
       await deps.markSent(r.reservationId);
+    } catch (err) {
+      // 送信は済んだがマークに失敗 → 次回起動時に再送される（重複送信を許容）。
+      console.error('[reminder] markSent failed:', err);
+      failed += 1;
+      continue;
+    }
+    try {
       await deps.writeLog(r.reservationId, {
         date:       r.date,
         startTime:  r.startTime,
         facilityId: r.facilityId,
       });
-      sent += 1;
     } catch (err) {
-      // 送信は成功したがマーク/ログに失敗した場合は failed とみなして
-      // 次回起動時に再送できるようにする（重複送信が起きうるが許容）
-      console.error('[reminder] markSent/writeLog failed:', err);
-      failed += 1;
+      // 監査ログ失敗は non-fatal。送信済みマークは完了しているため
+      // sent として計上し、再送はしない（ログが欠落するのは許容）。
+      console.error('[reminder] writeLog failed:', err);
     }
+    sent += 1;
   }
 
   return {

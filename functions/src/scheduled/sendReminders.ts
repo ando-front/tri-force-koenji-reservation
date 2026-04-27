@@ -33,5 +33,13 @@ export const sendReservationReminders = onSchedule(
     });
 
     console.log('[reminder]', JSON.stringify(result));
+
+    // 1件でも送信失敗があればハンドラを失敗終了させて Cloud Scheduler の retry を発火させる。
+    // markSent は失敗時に立てないので、retry 中も対象として残り、再送される。
+    if (result.failed > 0) {
+      throw new Error(
+        `Reminder delivery failed for ${result.failed} reservation(s) on ${targetDate}`
+      );
+    }
   }
 );

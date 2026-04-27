@@ -174,7 +174,7 @@ export async function createReservation(
   });
 
   const saved = await reservationRef.get();
-  return { reservationId: saved.id, ...saved.data() } as Reservation;
+  return { ...saved.data(), reservationId: saved.id } as Reservation;
 }
 
 /** 予約のステータスを更新する */
@@ -207,7 +207,7 @@ export async function updateReservationStatus(
 
   await ref.update(update);
   const updated = await ref.get();
-  return { reservationId: updated.id, ...updated.data() } as Reservation;
+  return { ...updated.data(), reservationId: updated.id } as Reservation;
 }
 
 /**
@@ -236,7 +236,7 @@ export async function findReservationByCodeAndEmail(
 
   if (!primary.empty) {
     const doc = primary.docs[0];
-    return { reservationId: doc.id, ...doc.data() } as Reservation;
+    return { ...doc.data(), reservationId: doc.id } as Reservation;
   }
 
   // Step 2: 既存予約向けフォールバック。emailLower が未設定のデータを
@@ -260,7 +260,7 @@ export async function findReservationByCodeAndEmail(
       const storedEmail =
         typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
       if (storedEmail === normalizedEmail) {
-        return { reservationId: doc.id, ...data } as Reservation;
+        return { ...data, reservationId: doc.id } as Reservation;
       }
     }
   }
@@ -288,7 +288,7 @@ export async function listConfirmedReservationsByDate(date: string): Promise<Res
     .where('date',   '==', date)
     .where('status', '==', 'confirmed')
     .get();
-  return snap.docs.map((d) => ({ reservationId: d.id, ...d.data() })) as Reservation[];
+  return snap.docs.map((d) => ({ ...d.data(), reservationId: d.id })) as Reservation[];
 }
 
 /** 予約に reminderSentAt を立てる（冪等性保持） */
@@ -311,7 +311,7 @@ export async function listReservationsByDateRange(
     .where('date', '>=', dateFrom)
     .where('date', '<=', dateTo)
     .get();
-  return snap.docs.map((d) => ({ reservationId: d.id, ...d.data() })) as Reservation[];
+  return snap.docs.map((d) => ({ ...d.data(), reservationId: d.id })) as Reservation[];
 }
 
 /** 予約一覧を取得する（管理者用） */
@@ -340,8 +340,8 @@ export async function listReservations(
   const snap = await q.get();
   const docs = snap.docs.slice(0, limit);
   const reservations = docs.map((d) => ({
-    reservationId: d.id,
     ...d.data(),
+    reservationId: d.id,
   })) as Reservation[];
 
   let nextCursor: string | undefined;

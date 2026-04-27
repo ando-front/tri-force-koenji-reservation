@@ -28,6 +28,7 @@ interface FakeDeps {
   markedIds: string[];
   loggedIds: string[];
   markThrowsFor?: string;
+  writeLogThrowsFor?: string;
 }
 
 function makeDeps(initial: Partial<FakeDeps> = {}) {
@@ -53,6 +54,7 @@ function makeDeps(initial: Partial<FakeDeps> = {}) {
       state.markedIds.push(id);
     }),
     writeLog: jest.fn(async (id: string, _payload: Record<string, unknown>) => {
+      if (state.writeLogThrowsFor === id) throw new Error('writeLog failed');
       state.loggedIds.push(id);
     }),
   };
@@ -153,6 +155,29 @@ describe('processReminders', () => {
       sent: 0,
       alreadySent: 0,
       failed: 1,
+    });
+    consoleSpy.mockRestore();
+  });
+
+  it('writeLog が失敗しても markSent 完了済みなら sent 扱い（再送しない）', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const r1 = makeReservation({ reservationId: 'aaa1' });
+    const deps = makeDeps({
+      reservations: [r1],
+      writeLogThrowsFor: 'aaa1',
+    });
+
+    const result = await processReminders('2026-04-12', deps);
+
+    expect(deps.state.sentIds).toEqual(['aaa1']);
+    expect(deps.state.markedIds).toEqual(['aaa1']);
+    expect(deps.state.loggedIds).toEqual([]);
+    expect(result).toEqual({
+      date: '2026-04-12',
+      candidates: 1,
+      sent: 1,
+      alreadySent: 0,
+      failed: 0,
     });
     consoleSpy.mockRestore();
   });
