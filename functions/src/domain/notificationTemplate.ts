@@ -179,6 +179,115 @@ export function buildReservationConfirmationEmail(
   };
 }
 
+// ─── リマインダー ─────────────────────────────────────────────────────────────
+
+/**
+ * 翌日の予約リマインダーメールの件名・本文・HTMLを生成する純関数。
+ */
+export function buildReminderEmail(
+  r: Reservation,
+  options: { frontendBaseUrl?: string } = {}
+): ReservationEmailContent {
+  const code = reservationCode(r);
+  const greetingName = getReservationMailName(r.memberName);
+  const myReservationUrl = buildMyReservationUrl(code, options.frontendBaseUrl);
+  const subject = `【Tri-force Koenji】明日の施設予約のお知らせ（予約番号: ${code}）`;
+
+  const textLines: string[] = [
+    `${greetingName} 様`,
+    '',
+    '明日の施設予約のお知らせです。来館をお待ちしております。',
+    '',
+    '━━━━━━━━━━━━━━━━',
+    `予約番号: ${code}`,
+    `施設名  : ${r.facilityName}`,
+    `利用日  : ${r.date}`,
+    `時間    : ${r.startTime} 〜 ${r.endTime}`,
+    `参加人数: ${r.participants}名`,
+    `利用目的: ${r.purpose}`,
+    '━━━━━━━━━━━━━━━━',
+    '',
+    'ご都合が悪くなった場合は、こちらからキャンセルできます（利用日当日まで可能）:',
+    myReservationUrl,
+    '',
+    'Tri-force Koenji',
+  ];
+
+  const details: [string, string][] = [
+    ['予約番号', code],
+    ['施設名',   r.facilityName],
+    ['利用日',   r.date],
+    ['時間',     `${r.startTime} 〜 ${r.endTime}`],
+    ['参加人数', `${r.participants}名`],
+    ['利用目的', r.purpose],
+  ];
+
+  const detailRows = details
+    .map(
+      ([label, value]) => `
+        <tr>
+          <th style="padding:8px 12px;text-align:left;font-weight:500;color:#6b7280;white-space:nowrap;vertical-align:top;">${escapeHtml(label)}</th>
+          <td style="padding:8px 12px;color:#111827;word-break:break-all;">${escapeHtml(value)}</td>
+        </tr>`
+    )
+    .join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f9fafb;font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Noto Sans JP',Meiryo,sans-serif;color:#111827;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f9fafb;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="560" style="max-width:560px;background-color:#ffffff;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+          <tr>
+            <td style="padding:24px 32px 8px 32px;border-bottom:1px solid #f3f4f6;">
+              <p style="margin:0;font-size:12px;color:#6b7280;letter-spacing:0.1em;">TRI-FORCE KOENJI</p>
+              <h1 style="margin:4px 0 0 0;font-size:20px;color:#111827;">明日の施設予約のお知らせ</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;">
+              <p style="margin:0 0 12px 0;font-size:14px;line-height:1.6;">${escapeHtml(greetingName)} 様</p>
+              <p style="margin:0 0 16px 0;font-size:14px;line-height:1.6;">明日の施設予約のお知らせです。来館をお待ちしております。</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;background-color:#f9fafb;border-radius:6px;font-size:14px;margin:8px 0 20px 0;">
+                ${detailRows}
+              </table>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 0 0;">
+                <tr>
+                  <td style="border-radius:6px;background-color:#2563eb;">
+                    <a href="${escapeHtml(myReservationUrl)}" style="display:inline-block;padding:10px 20px;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:6px;">予約の確認・キャンセル</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:12px 0 0 0;font-size:12px;color:#6b7280;line-height:1.6;">
+                ご都合が悪くなった場合はリンクからキャンセルできます。利用日当日まで手続き可能です。
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px 32px;border-top:1px solid #f3f4f6;font-size:12px;color:#6b7280;line-height:1.6;">
+              このメールは前日に自動送信しています。お心当たりのない場合はお手数ですが本メールを破棄してください。<br/>
+              Tri-force Koenji
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return {
+    subject,
+    text: textLines.join('\n'),
+    html,
+  };
+}
+
 // ─── キャンセル通知 ────────────────────────────────────────────────────────────
 
 /** キャンセル通知の発行元 */

@@ -1,6 +1,7 @@
 import {
   buildCancellationNotificationEmail,
   buildMyReservationUrl,
+  buildReminderEmail,
   buildReservationConfirmationEmail,
 } from './notificationTemplate';
 import type { Reservation } from '../../../shared/types';
@@ -185,5 +186,49 @@ describe('buildCancellationNotificationEmail', () => {
     const { text, html } = buildCancellationNotificationEmail(r, { triggeredBy: 'member' });
     expect(text).toMatch(/^会員 様/);
     expect(html).toContain('会員 様');
+  });
+});
+
+describe('buildReminderEmail', () => {
+  const baseUrl = 'https://example.com';
+
+  it('subject にリマインダー文言と8桁コードを含める', () => {
+    const r = makeReservation();
+    const { subject } = buildReminderEmail(r, { frontendBaseUrl: baseUrl });
+    expect(subject).toContain('明日');
+    expect(subject).toContain('ABC12345');
+  });
+
+  it('text/HTML どちらにも予約詳細とキャンセルリンクを含める', () => {
+    const r = makeReservation();
+    const { text, html } = buildReminderEmail(r, { frontendBaseUrl: baseUrl });
+    for (const fragment of ['ABC12345', 'フリーマット', '2026-04-12', '10:00', '11:00', '2名', '自主練習']) {
+      expect(text).toContain(fragment);
+      expect(html).toContain(fragment);
+    }
+    const expectedUrl = 'https://example.com/my-reservation?code=ABC12345';
+    expect(html).toContain(`href="${expectedUrl}"`);
+    expect(text).toContain(expectedUrl);
+  });
+
+  it('memberName が空のときは「会員 様」で挨拶を返す', () => {
+    const r = makeReservation({ memberName: '' });
+    const { text, html } = buildReminderEmail(r, { frontendBaseUrl: baseUrl });
+    expect(text).toMatch(/^会員 様/);
+    expect(html).toContain('会員 様');
+  });
+
+  it('memberName のHTML特殊文字をエスケープする', () => {
+    const r = makeReservation({ memberName: '<b>x</b>' });
+    const { html } = buildReminderEmail(r);
+    expect(html).not.toContain('<b>x</b>');
+    expect(html).toContain('&lt;b&gt;x&lt;/b&gt;');
+  });
+
+  it('FRONTEND_BASE_URL 未指定時もリンクは相対パスで埋め込まれる', () => {
+    const r = makeReservation();
+    const { html, text } = buildReminderEmail(r);
+    expect(html).toContain('href="/my-reservation?code=ABC12345"');
+    expect(text).toContain('/my-reservation?code=ABC12345');
   });
 });

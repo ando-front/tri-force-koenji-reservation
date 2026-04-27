@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { Reservation } from '../../../shared/types';
 import {
   buildCancellationNotificationEmail,
+  buildReminderEmail,
   buildReservationConfirmationEmail,
   CancellationEmailOptions,
 } from './notificationTemplate';
@@ -34,6 +35,38 @@ export async function sendReservationConfirmation(reservation: Reservation): Pro
   } catch (err) {
     // メール失敗はログだけ記録し、予約処理は成功として扱う
     console.error('[email] sendReservationConfirmation failed:', err);
+  }
+}
+
+/**
+ * 翌日の予約リマインダーメールを送信する。
+ * 他の通知関数と異なり、呼び出し側で成否に応じて `reminderSentAt` を立てる必要があるため、
+ * boolean を返す（true=送信成功 / false=設定不備または送信失敗）。
+ */
+export async function sendReminderEmail(reservation: Reservation): Promise<boolean> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error('[email] RESEND_API_KEY is not configured; skipping reminder');
+      return false;
+    }
+
+    const resendClient = new Resend(apiKey);
+    const { subject, text, html } = buildReminderEmail(reservation, {
+      frontendBaseUrl: process.env.FRONTEND_BASE_URL,
+    });
+
+    await resendClient.emails.send({
+      from:    FROM_ADDRESS,
+      to:      [reservation.email],
+      subject,
+      text,
+      html,
+    });
+    return true;
+  } catch (err) {
+    console.error('[email] sendReminderEmail failed:', err);
+    return false;
   }
 }
 
