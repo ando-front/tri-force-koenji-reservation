@@ -114,6 +114,8 @@ export interface Reservation {
   updatedAt: unknown;
   cancelledAt?: unknown;
   cancelReason?: string;
+  /** リマインダーメール送信済みのタイムスタンプ。再送防止用 */
+  reminderSentAt?: unknown;
 }
 
 // ─── 管理者 ────────────────────────────────────────────────────────────────────
@@ -132,6 +134,7 @@ export type AuditAction =
   | 'reservation.confirmed'
   | 'reservation.cancelled'
   | 'reservation.deleted'
+  | 'reservation.reminder_sent'
   | 'content.updated';
 
 export interface AuditLog {

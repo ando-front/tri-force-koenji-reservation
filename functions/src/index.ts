@@ -64,3 +64,5 @@ export const api = functions.onRequest(
   },
   app
 );
+
+export { sendReservationReminders } from './scheduled/sendReminders';

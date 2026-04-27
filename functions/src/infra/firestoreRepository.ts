@@ -279,6 +279,26 @@ export async function deleteReservation(reservationId: string): Promise<void> {
 }
 
 /**
+ * 指定日の確定予約をすべて取得する（リマインダー送信用途）。
+ * Firestore の単一フィールドインデックスのみで動く（date, status の equality）。
+ */
+export async function listConfirmedReservationsByDate(date: string): Promise<Reservation[]> {
+  const snap = await db()
+    .collection('reservations')
+    .where('date',   '==', date)
+    .where('status', '==', 'confirmed')
+    .get();
+  return snap.docs.map((d) => ({ reservationId: d.id, ...d.data() })) as Reservation[];
+}
+
+/** 予約に reminderSentAt を立てる（冪等性保持） */
+export async function markReminderSent(reservationId: string): Promise<void> {
+  await db().collection('reservations').doc(reservationId).update({
+    reminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+/**
  * 指定日付レンジ（inclusive）の予約をすべて取得する。
  * ダッシュボードの集計用途。件数は数百件を想定。
  */
