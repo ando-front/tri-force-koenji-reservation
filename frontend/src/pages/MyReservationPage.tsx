@@ -8,6 +8,7 @@ import {
   CancelReservationSchema,
   LookupReservationSchema,
   LookupReservationsByEmailSchema,
+  type PublicReservationSummary,
   type PublicReservationView,
 } from '@/types';
 import {
@@ -46,8 +47,8 @@ export function MyReservationPage() {
   const [credentials, setCredentials] = useState<{ reservationCode: string; email: string } | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [confirmingCancel, setConfirmingCancel] = useState(false);
-  // メールで一覧モードで取得した予約一覧
-  const [emailMatches, setEmailMatches] = useState<PublicReservationView[] | null>(null);
+  // メールで一覧モードで取得した予約サマリ一覧（reservationCode は含まない）
+  const [emailMatches, setEmailMatches] = useState<PublicReservationSummary[] | null>(null);
   const [emailUsedForList, setEmailUsedForList] = useState<string>('');
 
   // ─── 予約番号で照会 ────────────────────────────────────────────────────────
@@ -88,12 +89,23 @@ export function MyReservationPage() {
 
   const onEmailSubmit = emailForm.handleSubmit((data) => emailListMutation.mutate(data));
 
-  // メール一覧から予約を選択した際は、保持していたメールと予約番号で詳細表示
-  function pickFromList(item: PublicReservationView) {
-    setReservation(item);
-    setCredentials({ reservationCode: item.reservationCode, email: emailUsedForList });
-    setConfirmingCancel(false);
-    setCancelReason('');
+  /**
+   * 一覧で選んだ予約はサマリのみで reservationCode を持たないため、
+   * 「予約番号で照会」タブにメールだけプリフィルした状態で誘導する。
+   * これにより本人確認として予約番号入力が必須となり、メールだけでの
+   * 詳細閲覧・キャンセルを防止する。
+   */
+  function jumpToCodeLookupFromList() {
+    codeForm.setValue('email', emailUsedForList);
+    codeForm.setValue('reservationCode', '');
+    setMode('code');
+    setReservation(null);
+    setEmailMatches(null);
+    // reservationCode 入力欄にフォーカス
+    requestAnimationFrame(() => {
+      const el = document.getElementById('reservationCode') as HTMLInputElement | null;
+      el?.focus();
+    });
   }
 
   // ─── キャンセル ──────────────────────────────────────────────────────────
@@ -102,10 +114,21 @@ export function MyReservationPage() {
     onSuccess: (data) => {
       setReservation(data);
       setConfirmingCancel(false);
-      // 一覧側のキャッシュも更新（キャンセル済みは一覧から消す）
-      if (emailMatches) {
-        setEmailMatches(emailMatches.filter((m) => m.reservationCode !== data.reservationCode));
-      }
+      // 一覧側のキャッシュも更新（キャンセル済みは一覧から消す）。
+      // 関数型 setState で古いクロージャを参照しないようにする。
+      // Summary には reservationCode が無いため、日付＋施設＋開始時刻で同定する。
+      setEmailMatches((prev) =>
+        prev
+          ? prev.filter(
+              (m) =>
+                !(
+                  m.date === data.date &&
+                  m.startTime === data.startTime &&
+                  m.facilityId === data.facilityId
+                )
+            )
+          : prev,
+      );
     },
   });
 
@@ -261,40 +284,45 @@ export function MyReservationPage() {
 
         {/* メール一覧結果 */}
         {mode === 'email' && emailMatches && !reservation && (
-          <div className="card mt-6">
+          <div className="card mt-6 space-y-4">
             {emailMatches.length === 0 ? (
               <p className="text-sm text-gray-500">
-                該当するアクティブな予約はありません。
+                該当する本日以降のアクティブな予約はありません。
               </p>
             ) : (
-              <ul className="divide-y divide-gray-100">
-                {emailMatches.map((m) => (
-                  <li key={m.reservationCode} className="py-3">
-                    <button
-                      type="button"
-                      onClick={() => pickFromList(m)}
-                      className="flex w-full items-center justify-between gap-3 text-left hover:bg-gray-50 rounded-md p-2 -m-2"
-                    >
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {m.facilityName}
-                          <span className="ml-2 font-mono text-xs text-gray-400">#{m.reservationCode}</span>
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {m.date} {m.startTime} 〜 {m.endTime} ／ {m.participants}名
-                        </p>
+              <>
+                <ul className="divide-y divide-gray-100">
+                  {emailMatches.map((m, idx) => (
+                    <li key={`${m.date}-${m.startTime}-${m.facilityId}-${idx}`} className="py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-gray-900">{m.facilityName}</p>
+                          <p className="text-xs text-gray-500">
+                            {m.date} {m.startTime} 〜 {m.endTime} ／ {m.participants}名
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                            STATUS_COLOR[m.status] ?? 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {STATUS_LABEL[m.status] ?? m.status}
+                        </span>
                       </div>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                          STATUS_COLOR[m.status] ?? 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {STATUS_LABEL[m.status] ?? m.status}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                    </li>
+                  ))}
+                </ul>
+                <div className="rounded-md border border-brand-100 bg-brand-50/40 p-3 text-xs text-brand-800">
+                  個別の詳細表示・キャンセルには予約完了メール記載の予約番号が必要です。
+                </div>
+                <button
+                  type="button"
+                  onClick={jumpToCodeLookupFromList}
+                  className="btn-primary w-full"
+                >
+                  予約番号を入力して詳細・キャンセルへ進む
+                </button>
+              </>
             )}
           </div>
         )}
@@ -302,16 +330,6 @@ export function MyReservationPage() {
         {/* 予約詳細 */}
         {reservation && (
           <div className="card mt-6 space-y-5">
-            {mode === 'email' && (
-              <button
-                type="button"
-                onClick={() => setReservation(null)}
-                className="text-sm text-brand-600 hover:underline"
-              >
-                ← 一覧に戻る
-              </button>
-            )}
-
             <div className="flex items-center gap-3">
               <span
                 className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${

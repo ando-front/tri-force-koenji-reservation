@@ -21,6 +21,7 @@ import {
   CreateReservationSchema,
   LookupReservationSchema,
   LookupReservationsByEmailSchema,
+  PublicReservationSummary,
   PublicReservationView,
   Reservation,
   UpdateStatusSchema,
@@ -30,6 +31,23 @@ import {
 import type { ZodIssue } from 'zod';
 
 const router = Router();
+
+/**
+ * メール検索の一覧表示用サマリへ落とす。
+ * メールアドレス所有のみで照会できるエンドポイントから返るため、
+ * reservationCode や利用目的・備考・氏名など個別の機微情報は含めない。
+ */
+function toPublicSummary(reservation: Reservation): PublicReservationSummary {
+  return {
+    facilityId:   reservation.facilityId,
+    facilityName: reservation.facilityName,
+    date:         reservation.date,
+    startTime:    reservation.startTime,
+    endTime:      reservation.endTime,
+    participants: reservation.participants,
+    status:       reservation.status,
+  };
+}
 
 /** 予約エンティティから会員向け表示用の項目だけ抜き出す */
 function toPublicView(reservation: Reservation): PublicReservationView {
@@ -197,7 +215,9 @@ router.post('/lookup-by-email', lookupRateLimit, async (req: Request, res: Respo
   const reservations = await listActiveReservationsByEmail(parsed.data.email, todayJst());
   res.json({
     success: true,
-    reservations: reservations.map(toPublicView),
+    // セキュリティ: reservationCode を含む PublicReservationView ではなくサマリで返す。
+    // 詳細・キャンセルには別途 reservationCode を要求する `lookup`/`lookup/cancel` を経由させる。
+    reservations: reservations.map(toPublicSummary),
   });
 });
 

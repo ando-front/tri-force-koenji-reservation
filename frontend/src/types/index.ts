@@ -19,6 +19,7 @@ export type {
   ListReservationsQuery,
   LookupReservationInput,
   LookupReservationsByEmailInput,
+  PublicReservationSummary,
   PublicReservationView,
   UpdateUsageGuideContentInput,
   UsageGuideContent,

@@ -279,11 +279,17 @@ export async function deleteReservation(reservationId: string): Promise<void> {
 }
 
 /**
- * 指定メールアドレスのアクティブ予約（pending/confirmed × 未来日）を返す。
+ * 指定メールアドレスのアクティブ予約（pending/confirmed × 本日以降）を返す。
  * 会員セルフサービスの「メールで一覧」用途。プライバシー保護のため
  * cancelled / 過去日は返さない。emailLower 正規化フィールドを優先で
  * 検索し、未設定の旧データには email 完全一致でフォールバック。
+ *
+ * 同一メールに過去予約が大量にある場合でも本日以降のアクティブ予約が
+ * 一覧から漏れないよう、Firestore 側では絞り込みなしで取得し、
+ * フィルタ後に hardLimit を厳密適用する（複合インデックス回避）。
  */
+const FETCH_BATCH = 500;
+
 export async function listActiveReservationsByEmail(
   email: string,
   todayDate: string,
@@ -292,11 +298,11 @@ export async function listActiveReservationsByEmail(
   const normalizedEmail = email.trim().toLowerCase();
   const trimmedEmail    = email.trim();
 
-  // Step 1: emailLower 等価検索（新規予約向け）
+  // Step 1: emailLower 等価検索（新規予約向け）。多めに取得してフィルタ後に切り詰める。
   const primary = await db()
     .collection('reservations')
     .where('emailLower', '==', normalizedEmail)
-    .limit(hardLimit)
+    .limit(FETCH_BATCH)
     .get();
 
   // Step 2: emailLower 未設定の旧予約向けフォールバック
@@ -309,7 +315,7 @@ export async function listActiveReservationsByEmail(
       db()
         .collection('reservations')
         .where('email', '==', c)
-        .limit(hardLimit)
+        .limit(FETCH_BATCH)
         .get()
     )
   );
@@ -329,13 +335,14 @@ export async function listActiveReservationsByEmail(
     }
   }
 
-  // アクティブ予約のみに絞り、利用日昇順で返す
+  // アクティブ予約のみに絞り、利用日昇順で返す。最後に hardLimit で切り詰める。
   return merged
     .filter((r) => (r.status === 'pending' || r.status === 'confirmed') && r.date >= todayDate)
     .sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
       return a.startTime.localeCompare(b.startTime);
-    });
+    })
+    .slice(0, hardLimit);
 }
 
 /**

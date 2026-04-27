@@ -12,6 +12,7 @@ import type {
   ListReservationsQuery,
   LookupReservationInput,
   LookupReservationsByEmailInput,
+  PublicReservationSummary,
   PublicReservationView,
   Reservation,
   UpdateUsageGuideContentInput,
@@ -122,11 +123,15 @@ export function cancelReservationByMember(
   }).then((res) => res.reservation);
 }
 
-/** メールアドレスから自分のアクティブ予約一覧を取得（会員向け） */
+/**
+ * メールアドレスから自分のアクティブ予約一覧（サマリ）を取得（会員向け）。
+ * セキュリティ上、reservationCode は返ってこない。詳細・キャンセルには
+ * 別途予約番号入力（`lookupReservation`）が必要。
+ */
 export function lookupReservationsByEmail(
   payload: LookupReservationsByEmailInput,
-): Promise<PublicReservationView[]> {
-  return request<{ reservations: PublicReservationView[] }>('/reservations/lookup-by-email', {
+): Promise<PublicReservationSummary[]> {
+  return request<{ reservations: PublicReservationSummary[] }>('/reservations/lookup-by-email', {
     method: 'POST',
     body:   JSON.stringify(payload),
   }).then((res) => res.reservations);
