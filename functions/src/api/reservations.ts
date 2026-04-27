@@ -51,8 +51,15 @@ function toPublicView(reservation: Reservation): PublicReservationView {
 
 // ─── 公開API ──────────────────────────────────────────────────────────────────
 
+// 公開予約登録のレートリミット。1インスタンスあたり 10分間に 10件 / IP の
+// ベストエフォート制限。Cloud Functions v2 ではインスタンスごとに独立して
+// カウントされるため、全体での厳密な上限を保証するものではない（最悪ケースで
+// maxInstances 倍まで通り得る）。同一IP配下で複数会員が連続登録するケース
+// （家族・知人など）も過度に排他しないよう、容量はやや緩めに設定。
+const createRateLimit = rateLimitByIp({ windowMs: 10 * 60 * 1000, max: 10, key: 'reservations-create' });
+
 /** POST /reservations — 予約登録（認証不要） */
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', createRateLimit, async (req: Request, res: Response) => {
   // バリデーション
   const parsed = CreateReservationSchema.safeParse(req.body);
   if (!parsed.success) {
