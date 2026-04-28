@@ -62,8 +62,27 @@ describe('buildReservationIcal', () => {
     const ics = buildReservationIcal(makeReservation(), {
       myReservationUrl: 'https://example.com/my-reservation?code=ABC12345',
     });
-    expect(ics).toContain('URL:https://example.com/my-reservation?code=ABC12345\r\n');
+    expect(ics).toContain('URL:https://example.com/my-reservation?code=ABC12345');
     expect(ics).toContain('詳細・キャンセル:');
+  });
+
+  it('URL プロパティは TEXT エスケープを受けない (, ; \\ がそのまま残る)', () => {
+    const ics = buildReservationIcal(makeReservation(), {
+      myReservationUrl: 'https://example.com/p?a=1,2;b=3',
+    });
+    // URL: 行のみを抽出してエスケープが入っていないことを検証
+    // (DESCRIPTION は TEXT 型なのでエスケープされる別物)
+    const urlLine = ics.split(/\r\n/).find((l) => l.startsWith('URL:')) ?? '';
+    expect(urlLine).toBe('URL:https://example.com/p?a=1,2;b=3');
+    expect(urlLine).not.toMatch(/\\,/);
+    expect(urlLine).not.toMatch(/\\;/);
+  });
+
+  it('URL の CR/LF は除去される', () => {
+    const ics = buildReservationIcal(makeReservation(), {
+      myReservationUrl: 'https://example.com/p\r\n?evil=1',
+    });
+    expect(ics).toContain('URL:https://example.com/p?evil=1');
   });
 
   it('TEXT エスケープ: ; , \\ を保護し、改行は \\n に置換する', () => {
@@ -75,14 +94,36 @@ describe('buildReservationIcal', () => {
     expect(ics).toContain('行1\\n行2');
   });
 
+  it('DESCRIPTION の改行は単一バックスラッシュ \\n になる（二重エスケープしない）', () => {
+    const ics = buildReservationIcal(makeReservation(), {
+      myReservationUrl: 'https://example.com/p',
+    });
+    // DESCRIPTION 内の行間は `\n` (1個のバックスラッシュ + n) であって `\\n` (2個 + n) ではない
+    expect(ics).toMatch(/DESCRIPTION:[^\r\n]*予約番号: ABC12345\\n施設:/);
+    expect(ics).not.toMatch(/DESCRIPTION:[^\r\n]*\\\\n施設:/);
+  });
+
   it('cancelled 予約は STATUS:CANCELLED を出力する', () => {
     const ics = buildReservationIcal(makeReservation({ status: 'cancelled' }));
     expect(ics).toContain('STATUS:CANCELLED\r\n');
   });
 
-  it('confirmed/pending 予約は STATUS:CONFIRMED を出力する', () => {
+  it('confirmed 予約は STATUS:CONFIRMED を出力する', () => {
     expect(buildReservationIcal(makeReservation({ status: 'confirmed' }))).toContain('STATUS:CONFIRMED\r\n');
-    expect(buildReservationIcal(makeReservation({ status: 'pending' }))).toContain('STATUS:CONFIRMED\r\n');
+  });
+
+  it('pending 予約は STATUS:TENTATIVE を出力する（カレンダー側で仮予約として表示）', () => {
+    expect(buildReservationIcal(makeReservation({ status: 'pending' }))).toContain('STATUS:TENTATIVE\r\n');
+  });
+
+  it('75 octets を超える行は CRLF + 先頭スペースで folding される', () => {
+    const longUrl = 'https://example.com/very/long/path/that/exceeds/seventy-five-octets-in-length/for-testing-rfc5545-folding-behaviour-please-please';
+    const ics = buildReservationIcal(makeReservation(), { myReservationUrl: longUrl });
+    // URL 行が複数行に折り返されていること
+    const urlPosition = ics.indexOf('URL:');
+    const afterUrl = ics.slice(urlPosition);
+    // 折り返しがある場合は \r\n + space が含まれる
+    expect(afterUrl).toMatch(/URL:[^\r\n]+\r\n [^\r\n]+/);
   });
 
   it('purpose が空でも本文を生成し、行数が増えない', () => {

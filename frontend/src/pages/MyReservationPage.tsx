@@ -68,6 +68,8 @@ export function MyReservationPage() {
       setCredentials({ reservationCode: variables.reservationCode, email: variables.email });
       setConfirmingCancel(false);
       setCancelReason('');
+      // 別予約に切り替わった際、前の icalMutation のエラーが残らないようリセット
+      icalMutation.reset();
     },
   });
 
@@ -156,6 +158,7 @@ export function MyReservationPage() {
     setCancelReason('');
     lookupMutation.reset();
     emailListMutation.reset();
+    icalMutation.reset();
   }
 
   const isPast = reservation ? reservation.date < todayJst() : false;

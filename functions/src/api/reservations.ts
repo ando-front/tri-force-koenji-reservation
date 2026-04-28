@@ -227,7 +227,10 @@ router.post('/lookup/ical', lookupRateLimit, async (req: Request, res: Response)
   }
 
   const code = reservation.reservationId.slice(0, 8).toUpperCase();
-  const myReservationUrl = buildMyReservationUrl(code, process.env.FRONTEND_BASE_URL);
+  // buildMyReservationUrl は FRONTEND_BASE_URL 未設定時に相対パスを返すが、
+  // iCalendar の URL プロパティは絶対URI前提。絶対URL のときだけ iCal に含める。
+  const candidateUrl = buildMyReservationUrl(code, process.env.FRONTEND_BASE_URL);
+  const myReservationUrl = /^https?:\/\//i.test(candidateUrl) ? candidateUrl : undefined;
   const ics = buildReservationIcal(reservation, { myReservationUrl });
 
   res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
