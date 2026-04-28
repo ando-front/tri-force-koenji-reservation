@@ -266,6 +266,13 @@ export const CancelReservationSchema = z.object({
 
 export type CancelReservationInput = z.infer<typeof CancelReservationSchema>;
 
+/** POST /reservations/lookup-by-email リクエストボディ */
+export const LookupReservationsByEmailSchema = z.object({
+  email: NormalizedEmailSchema,
+});
+
+export type LookupReservationsByEmailInput = z.infer<typeof LookupReservationsByEmailSchema>;
+
 /** 会員向けに返却する予約情報（機微情報を除く） */
 export interface PublicReservationView {
   reservationCode: string;
@@ -281,6 +288,23 @@ export interface PublicReservationView {
   status: ReservationStatus;
   cancelledAt?: unknown;
   cancelReason?: string;
+}
+
+/**
+ * メールアドレス検索の一覧表示用サマリ。
+ * セキュリティ上、`reservationCode` や `purpose`/`remarks`/`memberName` 等は含めない。
+ * これは `lookup-by-email` がメール所有のみで照会できるため、ここで予約番号を返してしまうと
+ * その値を `lookup/cancel` に渡せて事実上「メール一発でキャンセル可能」になってしまう。
+ * 詳細閲覧・キャンセルには別途予約番号の入力（`lookup` フロー）が必要。
+ */
+export interface PublicReservationSummary {
+  facilityId: string;
+  facilityName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  participants: number;
+  status: ReservationStatus;
 }
 
 /** GET /availability レスポンスの各スロット */

@@ -7,12 +7,21 @@ import { z } from 'zod';
 import {
   CancelReservationSchema,
   LookupReservationSchema,
+  LookupReservationsByEmailSchema,
+  type PublicReservationSummary,
   type PublicReservationView,
 } from '@/types';
-import { cancelReservationByMember, lookupReservation } from '@/lib/api';
+import {
+  cancelReservationByMember,
+  lookupReservation,
+  lookupReservationsByEmail,
+} from '@/lib/api';
 import { formatReservationDisplayName } from '@/lib/reservationDisplay';
 
-type LookupForm = z.infer<typeof LookupReservationSchema>;
+type LookupForm        = z.infer<typeof LookupReservationSchema>;
+type LookupByEmailForm = z.infer<typeof LookupReservationsByEmailSchema>;
+
+type Mode = 'code' | 'email';
 
 const STATUS_LABEL: Record<string, string> = {
   pending:   '仮受付',
@@ -33,20 +42,19 @@ function todayJst(): string {
 
 export function MyReservationPage() {
   const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState<Mode>('code');
   const [reservation, setReservation] = useState<PublicReservationView | null>(null);
   const [credentials, setCredentials] = useState<{ reservationCode: string; email: string } | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  // メールで一覧モードで取得した予約サマリ一覧（reservationCode は含まない）
+  const [emailMatches, setEmailMatches] = useState<PublicReservationSummary[] | null>(null);
+  const [emailUsedForList, setEmailUsedForList] = useState<string>('');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LookupForm>({
+  // ─── 予約番号で照会 ────────────────────────────────────────────────────────
+  const codeForm = useForm<LookupForm>({
     resolver: zodResolver(LookupReservationSchema),
     defaultValues: {
-      // 予約番号は URL クエリから受け取り可能。メールアドレスはブラウザ履歴や
-      // リファラに残るのを避けるため、クエリからは受け付けない。
       reservationCode: searchParams.get('code') ?? '',
       email:           '',
     },
@@ -62,15 +70,67 @@ export function MyReservationPage() {
     },
   });
 
+  const onCodeSubmit = codeForm.handleSubmit((data) => lookupMutation.mutate(data));
+
+  // ─── メールで一覧 ─────────────────────────────────────────────────────────
+  const emailForm = useForm<LookupByEmailForm>({
+    resolver: zodResolver(LookupReservationsByEmailSchema),
+    defaultValues: { email: '' },
+  });
+
+  const emailListMutation = useMutation({
+    mutationFn: lookupReservationsByEmail,
+    onSuccess: (data, variables) => {
+      setEmailMatches(data);
+      setEmailUsedForList(variables.email);
+      setReservation(null);
+    },
+  });
+
+  const onEmailSubmit = emailForm.handleSubmit((data) => emailListMutation.mutate(data));
+
+  /**
+   * 一覧で選んだ予約はサマリのみで reservationCode を持たないため、
+   * 「予約番号で照会」タブにメールだけプリフィルした状態で誘導する。
+   * これにより本人確認として予約番号入力が必須となり、メールだけでの
+   * 詳細閲覧・キャンセルを防止する。
+   */
+  function jumpToCodeLookupFromList() {
+    codeForm.setValue('email', emailUsedForList);
+    codeForm.setValue('reservationCode', '');
+    setMode('code');
+    setReservation(null);
+    setEmailMatches(null);
+    // reservationCode 入力欄にフォーカス
+    requestAnimationFrame(() => {
+      const el = document.getElementById('reservationCode') as HTMLInputElement | null;
+      el?.focus();
+    });
+  }
+
+  // ─── キャンセル ──────────────────────────────────────────────────────────
   const cancelMutation = useMutation({
     mutationFn: cancelReservationByMember,
     onSuccess: (data) => {
       setReservation(data);
       setConfirmingCancel(false);
+      // 一覧側のキャッシュも更新（キャンセル済みは一覧から消す）。
+      // 関数型 setState で古いクロージャを参照しないようにする。
+      // Summary には reservationCode が無いため、日付＋施設＋開始時刻で同定する。
+      setEmailMatches((prev) =>
+        prev
+          ? prev.filter(
+              (m) =>
+                !(
+                  m.date === data.date &&
+                  m.startTime === data.startTime &&
+                  m.facilityId === data.facilityId
+                )
+            )
+          : prev,
+      );
     },
   });
-
-  const onSubmit = handleSubmit((data) => lookupMutation.mutate(data));
 
   function handleConfirmCancel() {
     if (!credentials) return;
@@ -80,6 +140,17 @@ export function MyReservationPage() {
     });
     if (!validated.success) return;
     cancelMutation.mutate(validated.data);
+  }
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setReservation(null);
+    setEmailMatches(null);
+    setEmailUsedForList('');
+    setConfirmingCancel(false);
+    setCancelReason('');
+    lookupMutation.reset();
+    emailListMutation.reset();
   }
 
   const isPast = reservation ? reservation.date < todayJst() : false;
@@ -94,56 +165,167 @@ export function MyReservationPage() {
           </Link>
           <h1 className="mt-3 text-2xl font-bold text-gray-900">予約の確認・キャンセル</h1>
           <p className="mt-2 text-sm text-gray-600">
-            予約完了メールに記載の予約番号（8桁）と、予約時に入力したメールアドレスを入力してください。
+            予約番号で個別に確認するか、メールアドレスでアクティブな予約を一覧表示できます。
           </p>
         </header>
 
-        {/* 照会フォーム */}
-        <form onSubmit={onSubmit} className="card space-y-5">
-          <div>
-            <label htmlFor="reservationCode" className="form-label">
-              予約番号 <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="reservationCode"
-              type="text"
-              autoComplete="off"
-              inputMode="text"
-              maxLength={8}
-              placeholder="例：A1B2C3D4"
-              className="form-input font-mono uppercase tracking-widest"
-              {...register('reservationCode')}
-            />
-            {errors.reservationCode && (
-              <p className="form-error">{errors.reservationCode.message}</p>
+        {/* タブ切替 */}
+        <div role="tablist" className="mb-3 flex rounded-md border border-gray-200 bg-white p-1 text-sm">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'code'}
+            onClick={() => switchMode('code')}
+            className={`flex-1 rounded px-3 py-2 transition ${
+              mode === 'code' ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            予約番号で照会
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'email'}
+            onClick={() => switchMode('email')}
+            className={`flex-1 rounded px-3 py-2 transition ${
+              mode === 'email' ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            メールで一覧
+          </button>
+        </div>
+
+        {/* 予約番号で照会 */}
+        {mode === 'code' && (
+          <form onSubmit={onCodeSubmit} className="card space-y-5">
+            <div>
+              <label htmlFor="reservationCode" className="form-label">
+                予約番号 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="reservationCode"
+                type="text"
+                autoComplete="off"
+                inputMode="text"
+                maxLength={8}
+                placeholder="例：A1B2C3D4"
+                className="form-input font-mono uppercase tracking-widest"
+                {...codeForm.register('reservationCode')}
+              />
+              {codeForm.formState.errors.reservationCode && (
+                <p className="form-error">{codeForm.formState.errors.reservationCode.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="email" className="form-label">
+                メールアドレス <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="例：taro@example.com"
+                className="form-input"
+                {...codeForm.register('email')}
+              />
+              {codeForm.formState.errors.email && (
+                <p className="form-error">{codeForm.formState.errors.email.message}</p>
+              )}
+            </div>
+
+            {lookupMutation.isError && (
+              <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+                {lookupMutation.error.message}
+              </p>
+            )}
+
+            <button type="submit" disabled={lookupMutation.isPending} className="btn-primary w-full">
+              {lookupMutation.isPending ? '照会中…' : '予約を照会する'}
+            </button>
+          </form>
+        )}
+
+        {/* メールで一覧 */}
+        {mode === 'email' && (
+          <form onSubmit={onEmailSubmit} className="card space-y-5">
+            <div>
+              <label htmlFor="emailListEmail" className="form-label">
+                メールアドレス <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="emailListEmail"
+                type="email"
+                autoComplete="email"
+                placeholder="例：taro@example.com"
+                className="form-input"
+                {...emailForm.register('email')}
+              />
+              {emailForm.formState.errors.email && (
+                <p className="form-error">{emailForm.formState.errors.email.message}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                予約完了メールに記載のアドレスを入力してください。プライバシー保護のため、
+                未来日のアクティブな予約のみが表示されます（過去・キャンセル済みは表示しません）。
+              </p>
+            </div>
+
+            {emailListMutation.isError && (
+              <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+                {emailListMutation.error.message}
+              </p>
+            )}
+
+            <button type="submit" disabled={emailListMutation.isPending} className="btn-primary w-full">
+              {emailListMutation.isPending ? '検索中…' : 'この方の予約を一覧する'}
+            </button>
+          </form>
+        )}
+
+        {/* メール一覧結果 */}
+        {mode === 'email' && emailMatches && !reservation && (
+          <div className="card mt-6 space-y-4">
+            {emailMatches.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                該当する本日以降のアクティブな予約はありません。
+              </p>
+            ) : (
+              <>
+                <ul className="divide-y divide-gray-100">
+                  {emailMatches.map((m, idx) => (
+                    <li key={`${m.date}-${m.startTime}-${m.facilityId}-${idx}`} className="py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-gray-900">{m.facilityName}</p>
+                          <p className="text-xs text-gray-500">
+                            {m.date} {m.startTime} 〜 {m.endTime} ／ {m.participants}名
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                            STATUS_COLOR[m.status] ?? 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {STATUS_LABEL[m.status] ?? m.status}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <div className="rounded-md border border-brand-100 bg-brand-50/40 p-3 text-xs text-brand-800">
+                  個別の詳細表示・キャンセルには予約完了メール記載の予約番号が必要です。
+                </div>
+                <button
+                  type="button"
+                  onClick={jumpToCodeLookupFromList}
+                  className="btn-primary w-full"
+                >
+                  予約番号を入力して詳細・キャンセルへ進む
+                </button>
+              </>
             )}
           </div>
-
-          <div>
-            <label htmlFor="email" className="form-label">
-              メールアドレス <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="例：taro@example.com"
-              className="form-input"
-              {...register('email')}
-            />
-            {errors.email && <p className="form-error">{errors.email.message}</p>}
-          </div>
-
-          {lookupMutation.isError && (
-            <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-              {lookupMutation.error.message}
-            </p>
-          )}
-
-          <button type="submit" disabled={lookupMutation.isPending} className="btn-primary w-full">
-            {lookupMutation.isPending ? '照会中…' : '予約を照会する'}
-          </button>
-        </form>
+        )}
 
         {/* 予約詳細 */}
         {reservation && (
