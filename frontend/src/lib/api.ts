@@ -124,6 +124,31 @@ export function cancelReservationByMember(
 }
 
 /**
+ * 予約番号＋メールで iCalendar (.ics) ファイルをダウンロードする。
+ * 既存の lookup と同じ二要素認証で本人確認する。
+ */
+export async function downloadReservationIcal(
+  payload: LookupReservationInput,
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/reservations/lookup/ical`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(body?.error?.message ?? body?.message ?? 'カレンダーの取得に失敗しました');
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tri-force-koenji-${payload.reservationCode.toUpperCase()}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
  * メールアドレスから自分のアクティブ予約一覧（サマリ）を取得（会員向け）。
  * セキュリティ上、reservationCode は返ってこない。詳細・キャンセルには
  * 別途予約番号入力（`lookupReservation`）が必要。
