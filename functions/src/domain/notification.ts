@@ -10,6 +10,36 @@ import {
 const FROM_ADDRESS = process.env.MAIL_FROM ?? 'noreply@tri-force-koenji.jp';
 const ADMIN_BCC    = process.env.ADMIN_MAIL_BCC ?? '';
 
+/**
+ * Resend SDK v3 の `emails.send` は HTTP 4xx/5xx を例外ではなく
+ * `{ data: null, error: {...} }` で返す仕様。チェックを忘れると
+ * APIキー不正・差出ドメイン未検証・宛先拒否などが無音で握り潰される。
+ * 送信成否を明示的に判定し、失敗時はログに残しつつ false を返す。
+ */
+async function sendViaResend(
+  resendClient: Resend,
+  payload: {
+    from: string;
+    to: string[];
+    bcc?: string[];
+    subject: string;
+    text: string;
+    html: string;
+  },
+  context: string,
+): Promise<boolean> {
+  const { error, data } = await resendClient.emails.send(payload);
+  if (error) {
+    console.error(`[email] ${context} rejected by Resend:`, error);
+    return false;
+  }
+  if (!data) {
+    console.error(`[email] ${context} returned no data from Resend`);
+    return false;
+  }
+  return true;
+}
+
 /** 予約確認メールを送信する（失敗しても例外を投げない） */
 export async function sendReservationConfirmation(reservation: Reservation): Promise<void> {
   try {
@@ -24,14 +54,18 @@ export async function sendReservationConfirmation(reservation: Reservation): Pro
       frontendBaseUrl: process.env.FRONTEND_BASE_URL,
     });
 
-    await resendClient.emails.send({
-      from:    FROM_ADDRESS,
-      to:      [reservation.email],
-      bcc:     ADMIN_BCC ? [ADMIN_BCC] : [],
-      subject,
-      text,
-      html,
-    });
+    await sendViaResend(
+      resendClient,
+      {
+        from:    FROM_ADDRESS,
+        to:      [reservation.email],
+        bcc:     ADMIN_BCC ? [ADMIN_BCC] : [],
+        subject,
+        text,
+        html,
+      },
+      'sendReservationConfirmation',
+    );
   } catch (err) {
     // メール失敗はログだけ記録し、予約処理は成功として扱う
     console.error('[email] sendReservationConfirmation failed:', err);
@@ -56,14 +90,17 @@ export async function sendReminderEmail(reservation: Reservation): Promise<boole
       frontendBaseUrl: process.env.FRONTEND_BASE_URL,
     });
 
-    await resendClient.emails.send({
-      from:    FROM_ADDRESS,
-      to:      [reservation.email],
-      subject,
-      text,
-      html,
-    });
-    return true;
+    return await sendViaResend(
+      resendClient,
+      {
+        from:    FROM_ADDRESS,
+        to:      [reservation.email],
+        subject,
+        text,
+        html,
+      },
+      'sendReminderEmail',
+    );
   } catch (err) {
     console.error('[email] sendReminderEmail failed:', err);
     return false;
@@ -88,14 +125,18 @@ export async function sendCancellationNotification(
     const resendClient = new Resend(apiKey);
     const { subject, text, html } = buildCancellationNotificationEmail(reservation, options);
 
-    await resendClient.emails.send({
-      from:    FROM_ADDRESS,
-      to:      [reservation.email],
-      bcc:     ADMIN_BCC ? [ADMIN_BCC] : [],
-      subject,
-      text,
-      html,
-    });
+    await sendViaResend(
+      resendClient,
+      {
+        from:    FROM_ADDRESS,
+        to:      [reservation.email],
+        bcc:     ADMIN_BCC ? [ADMIN_BCC] : [],
+        subject,
+        text,
+        html,
+      },
+      'sendCancellationNotification',
+    );
   } catch (err) {
     console.error('[email] sendCancellationNotification failed:', err);
   }
