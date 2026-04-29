@@ -71,6 +71,15 @@ function dateRange(from: string, to: string): string[] {
   return result;
 }
 
+/** 予約不可時間帯のスコープラベルを返す */
+function formatBlockedPeriodScope(bp: BlockedPeriod): string {
+  if (bp.dates && bp.dates.length > 0) return bp.dates.join('、');
+  if (bp.weekdays && bp.weekdays.length > 0) {
+    return bp.weekdays.map((w) => WEEKDAYS.find((d) => d.value === w)?.label ?? String(w)).join('・') + '曜';
+  }
+  return '全曜日';
+}
+
 /** 見出し付きセクション */
 function SectionHeader({
   title,
@@ -832,23 +841,16 @@ export function AdminFacilityManagement() {
                 {(form.blockedPeriods ?? []).length === 0 && (
                   <span className="text-sm text-gray-400">設定なし</span>
                 )}
-                {(form.blockedPeriods ?? []).map((bp, i) => {
-                  const scopeLabel = bp.dates && bp.dates.length > 0
-                    ? bp.dates.join('、')
-                    : bp.weekdays && bp.weekdays.length > 0
-                    ? bp.weekdays.map((w) => WEEKDAYS.find((d) => d.value === w)?.label ?? String(w)).join('・') + '曜'
-                    : '全曜日';
-                  return (
+                {(form.blockedPeriods ?? []).map((bp, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => removeGlobalBlockedPeriod(i)}
                       className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm text-amber-800"
                     >
-                      {bp.startTime}〜{bp.endTime}（{scopeLabel}）×
+                      {bp.startTime}〜{bp.endTime}（{formatBlockedPeriodScope(bp)}）×
                     </button>
-                  );
-                })}
+                  ))}
               </div>
             </div>
 

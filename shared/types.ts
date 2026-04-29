@@ -63,6 +63,9 @@ const BlockedPeriodSchema = z.object({
 }).refine((v) => v.endTime > v.startTime, {
   message: '終了時刻は開始時刻より後にしてください',
   path: ['endTime'],
+}).refine((v) => !(v.weekdays && v.weekdays.length > 0 && v.dates && v.dates.length > 0), {
+  message: '曜日指定と特定日指定は同時に設定できません',
+  path: ['weekdays'],
 });
 
 const WeekdayHoursSchema = z.object({
