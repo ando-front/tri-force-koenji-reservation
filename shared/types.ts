@@ -9,12 +9,23 @@ function todayString(): string {
 
 // ─── 施設 ─────────────────────────────────────────────────────────────────────
 
+/**
+ * 営業時間内でスロット生成を行わない時間帯。
+ * 例: 柔術クラス 12:00〜14:00 を予約不可にする場合は { startTime: "12:00", endTime: "14:00" }
+ */
+export interface BlockedPeriod {
+  startTime: string; // "HH:MM"
+  endTime:   string; // "HH:MM"
+}
+
 /** 曜日ごとの営業時間設定 */
 export interface WeekdayHours {
   weekday: number;             // 0=日〜6=土
   openHour: number;            // 0-23
   closeHour: number;           // 1-24
   slotDurationMinutes?: number; // 省略時は施設デフォルトを使用
+  /** この曜日内でスロットを生成しない時間帯。未設定時は [] と同義 */
+  blockedPeriods: BlockedPeriod[];
 }
 
 export interface Facility {
@@ -27,12 +38,24 @@ export interface Facility {
   closedWeekdays: number[]; // 0=日〜6=土
   maintenanceDates: string[];
   weekdayHours?: WeekdayHours[]; // 曜日ごとの営業時間（省略時は共通設定を使用）
+  /** 全曜日共通でスロット生成しない時間帯。曜日別設定がある場合はそちらの blockedPeriods で上書き */
+  blockedPeriods?: BlockedPeriod[];
   isActive: boolean;
   createdAt: unknown; // Firestore Timestamp
   updatedAt: unknown;
 }
 
 const DateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付は YYYY-MM-DD 形式で入力してください');
+
+const TimeStringSchema = z.string().regex(/^\d{2}:\d{2}$/, '時刻は HH:MM 形式で入力してください');
+
+const BlockedPeriodSchema = z.object({
+  startTime: TimeStringSchema,
+  endTime:   TimeStringSchema,
+}).refine((v) => v.endTime > v.startTime, {
+  message: '終了時刻は開始時刻より後にしてください',
+  path: ['endTime'],
+});
 
 const WeekdayHoursSchema = z.object({
   weekday: z.number().int().min(0).max(6),
@@ -44,6 +67,7 @@ const WeekdayHoursSchema = z.object({
     .min(15, '枠時間は15分以上で入力してください')
     .max(180, '枠時間は180分以下で入力してください')
     .optional(),
+  blockedPeriods: z.array(BlockedPeriodSchema).default([]),
 }).refine((v) => v.closeHour > v.openHour, {
   message: '終了時刻は開始時刻より後にしてください',
   path: ['closeHour'],
@@ -67,6 +91,7 @@ const FacilityFormBaseSchema = z.object({
   closedWeekdays: z.array(z.number().int().min(0).max(6)).default([]),
   maintenanceDates: z.array(DateStringSchema).default([]),
   weekdayHours: z.array(WeekdayHoursSchema).default([]),
+  blockedPeriods: z.array(BlockedPeriodSchema).default([]),
   isActive: z.boolean().default(true),
 });
 

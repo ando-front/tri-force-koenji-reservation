@@ -148,8 +148,10 @@ router.post('/', createRateLimit, async (req: Request, res: Response) => {
       facilityId: reservation.facilityId,
     });
 
-    // メール送信は send 関数側で例外を握り潰すので fire-and-forget で良い
-    void sendReservationConfirmation(reservation);
+    // メール送信は send 関数側で例外を握り潰す。
+    // Cloud Run では HTTP レスポンス送信後に CPU がスロットルされるため、
+    // レスポンスを返す前に await して確実に送信完了させる。
+    await sendReservationConfirmation(reservation);
 
     res.status(201).json({
       success:       true,
@@ -271,8 +273,8 @@ router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Respons
     facilityId: reservation.facilityId,
   });
 
-  // キャンセル通知メール（send 側で例外を握り潰す fire-and-forget）
-  void sendCancellationNotification(updated, {
+  // キャンセル通知メール（send 側で例外を握り潰す。Cloud Run CPU スロットル対策で await）
+  await sendCancellationNotification(updated, {
     triggeredBy:  'member',
     cancelReason: reason,
   });
@@ -351,9 +353,9 @@ router.patch('/admin/:id/status', requireAdmin, async (req: Request, res: Respon
     const action = status === 'confirmed' ? 'reservation.confirmed' : 'reservation.cancelled';
     await writeAuditLog(getActor(req), action, req.params.id, { status, cancelReason });
 
-    // キャンセル時は会員に通知（管理者起因・send 側で例外を握り潰す）
+    // キャンセル時は会員に通知（管理者起因・send 側で例外を握り潰す。Cloud Run CPU スロットル対策で await）
     if (status === 'cancelled') {
-      void sendCancellationNotification(updated, {
+      await sendCancellationNotification(updated, {
         triggeredBy:  'admin',
         cancelReason: cancelReason ?? '',
       });

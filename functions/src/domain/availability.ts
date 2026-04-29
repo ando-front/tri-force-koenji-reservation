@@ -1,4 +1,4 @@
-import { Facility, AvailabilitySlot, WeekdayHours } from '../../../shared/types';
+import { Facility, AvailabilitySlot, WeekdayHours, BlockedPeriod } from '../../../shared/types';
 
 export function isFacilityUnavailableOnDate(facility: Facility, date: string): boolean {
   const weekday = new Date(date + 'T00:00:00').getDay();
@@ -12,16 +12,36 @@ export function isFacilityUnavailableOnDate(facility: Facility, date: string): b
 export function getHoursForDate(
   facility: Facility,
   date: string,
-): { openHour: number; closeHour: number; slotDurationMinutes: number } {
+): { openHour: number; closeHour: number; slotDurationMinutes: number; blockedPeriods: BlockedPeriod[] } {
   const weekday = new Date(date + 'T00:00:00').getDay();
   const override: WeekdayHours | undefined = (facility.weekdayHours ?? []).find(
     (wh) => wh.weekday === weekday,
   );
   return {
-    openHour: override?.openHour ?? facility.openHour,
-    closeHour: override?.closeHour ?? facility.closeHour,
+    openHour:            override?.openHour            ?? facility.openHour,
+    closeHour:           override?.closeHour           ?? facility.closeHour,
     slotDurationMinutes: override?.slotDurationMinutes ?? facility.slotDurationMinutes,
+    // 曜日別設定に blockedPeriods があればそちらを優先し、なければ施設デフォルトを使う
+    // 古い Firestore ドキュメントは blockedPeriods を持たない場合があるため ?? [] でガード
+    blockedPeriods: override?.blockedPeriods ?? facility.blockedPeriods ?? [],
   };
+}
+
+/**
+ * スロットがブロック済み時間帯と重なるかチェックする。
+ * スロットが blocked period に完全に含まれている場合、または部分的に重なる場合は true を返す。
+ */
+function isSlotBlocked(
+  slotStartMin: number,
+  slotEndMin: number,
+  blockedPeriods: BlockedPeriod[],
+): boolean {
+  return blockedPeriods.some((bp) => {
+    const bpStart = hhmmToMinutes(bp.startTime);
+    const bpEnd   = hhmmToMinutes(bp.endTime);
+    // スロットと blocked period に重なりがある場合（接触のみは除外）
+    return slotStartMin < bpEnd && slotEndMin > bpStart;
+  });
 }
 
 /**
@@ -33,7 +53,7 @@ export function generateSlots(facility: Facility, date: string): Omit<Availabili
 
   if (isFacilityUnavailableOnDate(facility, date)) return [];
 
-  const { openHour, closeHour, slotDurationMinutes } = getHoursForDate(facility, date);
+  const { openHour, closeHour, slotDurationMinutes, blockedPeriods } = getHoursForDate(facility, date);
 
   const totalMinutes = (closeHour - openHour) * 60;
   const slotCount = Math.floor(totalMinutes / slotDurationMinutes);
@@ -41,6 +61,9 @@ export function generateSlots(facility: Facility, date: string): Omit<Availabili
   for (let i = 0; i < slotCount; i++) {
     const startMin = openHour * 60 + i * slotDurationMinutes;
     const endMin = startMin + slotDurationMinutes;
+
+    if (isSlotBlocked(startMin, endMin, blockedPeriods)) continue;
+
     slots.push({
       startTime: minutesToHHMM(startMin),
       endTime:   minutesToHHMM(endMin),
@@ -55,12 +78,14 @@ export function generateSlots(facility: Facility, date: string): Omit<Availabili
 export function isWithinOperatingHours(facility: Facility, date: string, startTime: string): boolean {
   if (isFacilityUnavailableOnDate(facility, date)) return false;
 
-  const { openHour, closeHour, slotDurationMinutes } = getHoursForDate(facility, date);
+  const { openHour, closeHour, slotDurationMinutes, blockedPeriods } = getHoursForDate(facility, date);
   const startMin = hhmmToMinutes(startTime);
   const endMin = startMin + slotDurationMinutes;
   const openMin  = openHour  * 60;
   const closeMin = closeHour * 60;
-  return startMin >= openMin && endMin <= closeMin;
+  if (startMin < openMin || endMin > closeMin) return false;
+
+  return !isSlotBlocked(startMin, endMin, blockedPeriods);
 }
 
 /** startTime から slotDurationMinutes 後の endTime を返す */
