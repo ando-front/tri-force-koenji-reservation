@@ -15,6 +15,7 @@ import {
   cancelReservationByMember,
   lookupReservation,
   lookupReservationsByEmail,
+  resendConfirmationByEmail,
 } from '@/lib/api';
 import { formatReservationDisplayName } from '@/lib/reservationDisplay';
 
@@ -84,10 +85,16 @@ export function MyReservationPage() {
       setEmailMatches(data);
       setEmailUsedForList(variables.email);
       setReservation(null);
+      resendMutation.reset();
     },
   });
 
   const onEmailSubmit = emailForm.handleSubmit((data) => emailListMutation.mutate(data));
+
+  // ─── 確認メール再送 ──────────────────────────────────────────────────────
+  const resendMutation = useMutation({
+    mutationFn: resendConfirmationByEmail,
+  });
 
   /**
    * 一覧で選んだ予約はサマリのみで reservationCode を持たないため、
@@ -313,7 +320,7 @@ export function MyReservationPage() {
                   ))}
                 </ul>
                 <div className="rounded-md border border-brand-100 bg-brand-50/40 p-3 text-xs text-brand-800">
-                  個別の詳細表示・キャンセルには予約完了メール記載の予約番号が必要です。
+                  個別の詳細表示・キャンセルには予約番号が必要です。予約番号は予約完了メールの件名・本文に記載されています。
                 </div>
                 <button
                   type="button"
@@ -324,6 +331,34 @@ export function MyReservationPage() {
                 </button>
               </>
             )}
+
+            {/* 確認メール再送 */}
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-xs text-gray-500 mb-2">
+                確認メールが見つからない場合は、予約番号入りの確認メールを再送できます。
+              </p>
+              {resendMutation.isSuccess ? (
+                <p className="rounded-md bg-green-50 p-3 text-sm text-green-800">
+                  確認メールを再送しました。しばらくしてからメールをご確認ください。
+                </p>
+              ) : (
+                <>
+                  {resendMutation.isError && (
+                    <p className="rounded-md bg-red-50 p-3 text-sm text-red-700 mb-2">
+                      {resendMutation.error?.message ?? '再送に失敗しました。しばらく後に再試行してください。'}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => resendMutation.mutate({ email: emailUsedForList })}
+                    disabled={resendMutation.isPending || !emailUsedForList}
+                    className="btn-secondary w-full text-sm disabled:opacity-40"
+                  >
+                    {resendMutation.isPending ? '送信中…' : '確認メール（予約番号入り）を再送する'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 

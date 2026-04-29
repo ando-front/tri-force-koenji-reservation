@@ -137,7 +137,21 @@ export function lookupReservationsByEmail(
   }).then((res) => res.reservations);
 }
 
-// ---- 管理者 API --------------------------------------------------------------
+/**
+ * アクティブな予約の確認メール（予約番号入り）を再送する（会員向け）。
+ * 指定メールアドレスのアクティブ予約があれば各予約の確認メールを再送する。
+ * プライバシー保護のため、予約の有無に関係なく成功を返す。
+ */
+export function resendConfirmationByEmail(
+  payload: LookupReservationsByEmailInput,
+): Promise<void> {
+  return request<void>('/reservations/resend-confirmation', {
+    method: 'POST',
+    body:   JSON.stringify(payload),
+  });
+}
+
+
 
 /** 施設一覧を取得（管理者） */
 export function adminListFacilities(): Promise<Facility[]> {
