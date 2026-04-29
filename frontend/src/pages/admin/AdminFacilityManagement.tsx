@@ -110,12 +110,13 @@ export function AdminFacilityManagement() {
   const [bulkCloseHour, setBulkCloseHour] = useState(22);
   const [bulkSlotDurationMinutes, setBulkSlotDurationMinutes] = useState<number | ''>('');
 
-  // 全体ブロック時間帯の入力ステート
+  // 全体ブロック時間帯の入力ステート（曜日/日付スコープ付き）
   const [globalBlockStart, setGlobalBlockStart] = useState('');
   const [globalBlockEnd, setGlobalBlockEnd] = useState('');
-
-  // 曜日別ブロック時間帯の入力ステート { weekday -> { start, end } }
-  const [weekdayBlockInput, setWeekdayBlockInput] = useState<Record<number, { start: string; end: string }>>({});
+  const [globalBlockScope, setGlobalBlockScope] = useState<'all' | 'weekdays' | 'dates'>('all');
+  const [globalBlockWeekdays, setGlobalBlockWeekdays] = useState<number[]>([]);
+  const [globalBlockDateInput, setGlobalBlockDateInput] = useState('');
+  const [globalBlockDates, setGlobalBlockDates] = useState<string[]>([]);
 
   const { data: facilities = [], isLoading, isError } = useQuery({
     queryKey: ['admin', 'facilities'],
@@ -171,7 +172,10 @@ export function AdminFacilityManagement() {
     setBulkSlotDurationMinutes('');
     setGlobalBlockStart('');
     setGlobalBlockEnd('');
-    setWeekdayBlockInput({});
+    setGlobalBlockScope('all');
+    setGlobalBlockWeekdays([]);
+    setGlobalBlockDateInput('');
+    setGlobalBlockDates([]);
   }
 
   function toggleBulkWeekday(weekday: number) {
@@ -193,7 +197,6 @@ export function AdminFacilityManagement() {
           openHour: bulkOpenHour,
           closeHour: bulkCloseHour,
           ...(bulkSlotDurationMinutes !== '' ? { slotDurationMinutes: bulkSlotDurationMinutes } : {}),
-          blockedPeriods: existing.find((wh) => wh.weekday === weekday)?.blockedPeriods ?? [],
         };
         const idx = updated.findIndex((wh) => wh.weekday === weekday);
         if (idx === -1) {
@@ -265,7 +268,6 @@ export function AdminFacilityManagement() {
               openHour: field === 'openHour' ? (value ?? current.openHour) : current.openHour,
               closeHour: field === 'closeHour' ? (value ?? current.closeHour) : current.closeHour,
               slotDurationMinutes: field === 'slotDurationMinutes' ? value : undefined,
-              blockedPeriods: [],
             },
           ].sort((a, b) => a.weekday - b.weekday),
         };
@@ -287,17 +289,33 @@ export function AdminFacilityManagement() {
         ...current,
         weekdayHours: [
           ...existing,
-          { weekday, openHour: current.openHour, closeHour: current.closeHour, blockedPeriods: [] },
+          { weekday, openHour: current.openHour, closeHour: current.closeHour },
         ].sort((a, b) => a.weekday - b.weekday),
       };
     });
   }
 
-  // ─── 全体ブロック時間帯 ─────────────────────────────────────────────────────
+  // ─── 予約不可時間帯 ─────────────────────────────────────────────────────────
+
+  function toggleGlobalBlockWeekday(weekday: number) {
+    setGlobalBlockWeekdays((current) =>
+      current.includes(weekday)
+        ? current.filter((w) => w !== weekday)
+        : [...current, weekday].sort((a, b) => a - b),
+    );
+  }
 
   function addGlobalBlockedPeriod() {
     if (!globalBlockStart || !globalBlockEnd || globalBlockEnd <= globalBlockStart) return;
-    const bp: BlockedPeriod = { startTime: globalBlockStart, endTime: globalBlockEnd };
+    if (globalBlockScope === 'weekdays' && globalBlockWeekdays.length === 0) return;
+    if (globalBlockScope === 'dates' && globalBlockDates.length === 0) return;
+
+    const bp: BlockedPeriod = {
+      startTime: globalBlockStart,
+      endTime: globalBlockEnd,
+      ...(globalBlockScope === 'weekdays' ? { weekdays: globalBlockWeekdays } : {}),
+      ...(globalBlockScope === 'dates' ? { dates: globalBlockDates } : {}),
+    };
     setForm((current) => ({
       ...current,
       blockedPeriods: [...(current.blockedPeriods ?? []), bp].sort((a, b) =>
@@ -306,6 +324,10 @@ export function AdminFacilityManagement() {
     }));
     setGlobalBlockStart('');
     setGlobalBlockEnd('');
+    setGlobalBlockScope('all');
+    setGlobalBlockWeekdays([]);
+    setGlobalBlockDateInput('');
+    setGlobalBlockDates([]);
   }
 
   function removeGlobalBlockedPeriod(index: number) {
@@ -313,42 +335,6 @@ export function AdminFacilityManagement() {
       ...current,
       blockedPeriods: (current.blockedPeriods ?? []).filter((_, i) => i !== index),
     }));
-  }
-
-  // ─── 曜日別ブロック時間帯 ────────────────────────────────────────────────────
-
-  function addWeekdayBlockedPeriod(weekday: number) {
-    const input = weekdayBlockInput[weekday];
-    if (!input?.start || !input?.end || input.end <= input.start) return;
-    const bp: BlockedPeriod = { startTime: input.start, endTime: input.end };
-    setForm((current) => {
-      const existing = current.weekdayHours ?? [];
-      const idx = existing.findIndex((wh) => wh.weekday === weekday);
-      if (idx === -1) return current;
-      const updated = [...existing];
-      updated[idx] = {
-        ...updated[idx],
-        blockedPeriods: [...(updated[idx].blockedPeriods ?? []), bp].sort((a, b) =>
-          a.startTime.localeCompare(b.startTime),
-        ),
-      };
-      return { ...current, weekdayHours: updated };
-    });
-    setWeekdayBlockInput((prev) => ({ ...prev, [weekday]: { start: '', end: '' } }));
-  }
-
-  function removeWeekdayBlockedPeriod(weekday: number, index: number) {
-    setForm((current) => {
-      const existing = current.weekdayHours ?? [];
-      const idx = existing.findIndex((wh) => wh.weekday === weekday);
-      if (idx === -1) return current;
-      const updated = [...existing];
-      updated[idx] = {
-        ...updated[idx],
-        blockedPeriods: (updated[idx].blockedPeriods ?? []).filter((_, i) => i !== index),
-      };
-      return { ...current, weekdayHours: updated };
-    });
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -716,132 +702,155 @@ export function AdminFacilityManagement() {
               </div>
             </div>
 
-            {/* ── ④ 予約不可時間帯（全曜日共通） ───────────────────────────── */}
+            {/* ── ④ 予約不可時間帯 ───────────────────────────────────────── */}
             <div>
               <SectionHeader
-                title="④ 予約不可時間帯（全曜日共通）"
-                description="毎日この時間帯のスロットは生成されません。例: 柔術クラス 12:00〜14:00 を設定すると、その前後のフリーマット枠だけ予約受付できます。曜日別の個別設定は下の⑤で行えます。"
+                title="④ 予約不可時間帯"
+                description="指定した時間帯のスロットは生成されません。全曜日共通・曜日指定・特定日指定のいずれかで設定できます。"
                 color="amber"
               />
-              <div className="mt-2 flex flex-wrap items-end gap-2">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-gray-500">開始</span>
-                  <input
-                    type="time"
-                    value={globalBlockStart}
-                    onChange={(e) => setGlobalBlockStart(e.target.value)}
-                    className="form-input py-1 text-sm"
-                  />
+
+              {/* 入力フォーム */}
+              <div className="mt-2 space-y-2 rounded-md border border-amber-100 bg-amber-50/40 p-3">
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">開始</span>
+                    <input
+                      type="time"
+                      value={globalBlockStart}
+                      onChange={(e) => setGlobalBlockStart(e.target.value)}
+                      className="form-input py-1 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500">終了</span>
+                    <input
+                      type="time"
+                      value={globalBlockEnd}
+                      onChange={(e) => setGlobalBlockEnd(e.target.value)}
+                      className="form-input py-1 text-sm"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-gray-500">終了</span>
-                  <input
-                    type="time"
-                    value={globalBlockEnd}
-                    onChange={(e) => setGlobalBlockEnd(e.target.value)}
-                    className="form-input py-1 text-sm"
-                  />
+
+                {/* スコープ選択 */}
+                <div className="flex flex-wrap gap-3">
+                  {(['all', 'weekdays', 'dates'] as const).map((scope) => (
+                    <label key={scope} className="flex items-center gap-1.5 text-sm text-gray-700">
+                      <input
+                        type="radio"
+                        name="globalBlockScope"
+                        checked={globalBlockScope === scope}
+                        onChange={() => setGlobalBlockScope(scope)}
+                        className="h-4 w-4"
+                      />
+                      {scope === 'all' && '全曜日共通'}
+                      {scope === 'weekdays' && '曜日指定'}
+                      {scope === 'dates' && '特定日指定'}
+                    </label>
+                  ))}
                 </div>
+
+                {/* 曜日チェックボックス */}
+                {globalBlockScope === 'weekdays' && (
+                  <div className="flex flex-wrap gap-3">
+                    {WEEKDAYS.map((weekday) => (
+                      <label key={weekday.value} className="flex items-center gap-1.5 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={globalBlockWeekdays.includes(weekday.value)}
+                          onChange={() => toggleGlobalBlockWeekday(weekday.value)}
+                          className="h-4 w-4"
+                        />
+                        <span>{weekday.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {/* 特定日入力 */}
+                {globalBlockScope === 'dates' && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={globalBlockDateInput}
+                        onChange={(e) => setGlobalBlockDateInput(e.target.value)}
+                        className="form-input py-1 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!globalBlockDateInput) return;
+                          setGlobalBlockDates((prev) =>
+                            [...new Set([...prev, globalBlockDateInput])].sort(),
+                          );
+                          setGlobalBlockDateInput('');
+                        }}
+                        disabled={!globalBlockDateInput}
+                        className="btn-secondary text-sm disabled:opacity-40"
+                      >
+                        日付を追加
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {globalBlockDates.map((date) => (
+                        <button
+                          key={date}
+                          type="button"
+                          onClick={() => setGlobalBlockDates((prev) => prev.filter((d) => d !== date))}
+                          className="rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-xs text-amber-800"
+                        >
+                          {date} ×
+                        </button>
+                      ))}
+                      {globalBlockDates.length === 0 && (
+                        <span className="text-xs text-gray-400">日付が選択されていません</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={addGlobalBlockedPeriod}
-                  disabled={!globalBlockStart || !globalBlockEnd || globalBlockEnd <= globalBlockStart}
+                  disabled={
+                    !globalBlockStart ||
+                    !globalBlockEnd ||
+                    globalBlockEnd <= globalBlockStart ||
+                    (globalBlockScope === 'weekdays' && globalBlockWeekdays.length === 0) ||
+                    (globalBlockScope === 'dates' && globalBlockDates.length === 0)
+                  }
                   className="btn-secondary whitespace-nowrap text-sm disabled:opacity-40"
                 >
-                  追加
+                  予約不可時間帯を追加
                 </button>
               </div>
+
+              {/* 登録済みリスト */}
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.blockedPeriods ?? []).length === 0 && (
                   <span className="text-sm text-gray-400">設定なし</span>
                 )}
-                {(form.blockedPeriods ?? []).map((bp, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => removeGlobalBlockedPeriod(i)}
-                    className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm text-amber-800"
-                  >
-                    {bp.startTime}〜{bp.endTime} ×
-                  </button>
-                ))}
+                {(form.blockedPeriods ?? []).map((bp, i) => {
+                  const scopeLabel = bp.dates && bp.dates.length > 0
+                    ? bp.dates.join('、')
+                    : bp.weekdays && bp.weekdays.length > 0
+                    ? bp.weekdays.map((w) => WEEKDAYS.find((d) => d.value === w)?.label ?? String(w)).join('・') + '曜'
+                    : '全曜日';
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => removeGlobalBlockedPeriod(i)}
+                      className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm text-amber-800"
+                    >
+                      {bp.startTime}〜{bp.endTime}（{scopeLabel}）×
+                    </button>
+                  );
+                })}
               </div>
             </div>
-
-            {/* ── ⑤ 予約不可時間帯（曜日別個別設定） ────────────────────────── */}
-            {(form.weekdayHours ?? []).length > 0 && (
-              <div>
-                <SectionHeader
-                  title="⑤ 予約不可時間帯（曜日別個別設定）"
-                  description="③で有効化した曜日ごとに、さらに個別の予約不可時間帯を設定できます。全曜日共通（④）の設定はこちらで上書きされます。"
-                  color="amber"
-                />
-                <div className="space-y-3 rounded-md border border-gray-200 p-3">
-                  {(form.weekdayHours ?? []).map((wh) => {
-                    const label = WEEKDAYS.find((w) => w.value === wh.weekday)?.label ?? String(wh.weekday);
-                    const input = weekdayBlockInput[wh.weekday] ?? { start: '', end: '' };
-                    return (
-                      <div key={wh.weekday}>
-                        <p className="text-xs font-medium text-gray-700 mb-1">{label}曜日</p>
-                        <div className="flex flex-wrap items-end gap-2 mb-1">
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-500">開始</span>
-                            <input
-                              type="time"
-                              value={input.start}
-                              onChange={(e) =>
-                                setWeekdayBlockInput((prev) => ({
-                                  ...prev,
-                                  [wh.weekday]: { ...prev[wh.weekday], start: e.target.value },
-                                }))
-                              }
-                              className="form-input py-1 text-sm"
-                            />
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-500">終了</span>
-                            <input
-                              type="time"
-                              value={input.end}
-                              onChange={(e) =>
-                                setWeekdayBlockInput((prev) => ({
-                                  ...prev,
-                                  [wh.weekday]: { ...prev[wh.weekday], end: e.target.value },
-                                }))
-                              }
-                              className="form-input py-1 text-sm"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => addWeekdayBlockedPeriod(wh.weekday)}
-                            disabled={!input.start || !input.end || input.end <= input.start}
-                            className="btn-secondary whitespace-nowrap text-sm disabled:opacity-40"
-                          >
-                            追加
-                          </button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {(wh.blockedPeriods ?? []).length === 0 && (
-                            <span className="text-xs text-gray-400">設定なし（全曜日共通の設定を使用）</span>
-                          )}
-                          {(wh.blockedPeriods ?? []).map((bp, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => removeWeekdayBlockedPeriod(wh.weekday, i)}
-                              className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm text-amber-800"
-                            >
-                              {bp.startTime}〜{bp.endTime} ×
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* ── メンテナンス日（特定の日付を予約不可） ────────────────────── */}
             <div>

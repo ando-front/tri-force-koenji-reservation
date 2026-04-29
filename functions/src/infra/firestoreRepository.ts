@@ -32,6 +32,12 @@ function normalizeBlockedPeriods(value: unknown): import('../../../shared/types'
     .map((item) => ({
       startTime: String(item.startTime ?? '00:00'),
       endTime:   String(item.endTime   ?? '00:00'),
+      ...(Array.isArray(item.weekdays) && item.weekdays.length > 0
+        ? { weekdays: item.weekdays.map(Number).filter((n: number) => n >= 0 && n <= 6) }
+        : {}),
+      ...(Array.isArray(item.dates) && item.dates.length > 0
+        ? { dates: item.dates.filter((d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) }
+        : {}),
     }))
     .filter((bp) => /^\d{2}:\d{2}$/.test(bp.startTime) && /^\d{2}:\d{2}$/.test(bp.endTime) && bp.endTime > bp.startTime);
 }
@@ -47,7 +53,10 @@ function normalizeWeekdayHours(value: unknown): WeekdayHours[] {
       ...(item.slotDurationMinutes !== undefined && item.slotDurationMinutes !== null
         ? { slotDurationMinutes: Number(item.slotDurationMinutes) }
         : {}),
-      blockedPeriods: normalizeBlockedPeriods(item.blockedPeriods),
+      // blockedPeriods が Firestore に存在する場合のみ設定（undefined = 施設レベルに委譲）
+      ...(item.blockedPeriods !== undefined
+        ? { blockedPeriods: normalizeBlockedPeriods(item.blockedPeriods) }
+        : {}),
     }))
     .filter((wh) => wh.weekday >= 0 && wh.weekday <= 6)
     .sort((a, b) => a.weekday - b.weekday);

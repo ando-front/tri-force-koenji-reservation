@@ -6,6 +6,21 @@ export function isFacilityUnavailableOnDate(facility: Facility, date: string): b
 }
 
 /**
+ * 施設レベルの blockedPeriods を指定日でフィルタリングして返す。
+ * - bp.dates が設定されている場合: その日付に含まれる場合のみ有効
+ * - bp.weekdays が設定されている場合: その曜日に含まれる場合のみ有効
+ * - どちらも未設定: 全日付に有効（全曜日共通）
+ */
+function filterBlockedPeriodsForDate(blockedPeriods: BlockedPeriod[], date: string): BlockedPeriod[] {
+  const weekday = new Date(date + 'T00:00:00').getDay();
+  return blockedPeriods.filter((bp) => {
+    if (bp.dates && bp.dates.length > 0) return bp.dates.includes(date);
+    if (bp.weekdays && bp.weekdays.length > 0) return bp.weekdays.includes(weekday);
+    return true; // scope なし = 全曜日共通
+  });
+}
+
+/**
  * 指定日の曜日に対応する営業時間を返す。
  * weekdayHours に対象曜日の設定があればそれを使い、なければ施設のデフォルトを返す。
  */
@@ -17,13 +32,19 @@ export function getHoursForDate(
   const override: WeekdayHours | undefined = (facility.weekdayHours ?? []).find(
     (wh) => wh.weekday === weekday,
   );
+
+  // 曜日別設定に blockedPeriods が明示されている場合はそちらを優先（施設レベルを上書き）
+  // 未設定（undefined）の場合は施設レベルの blockedPeriods をスコープフィルタして使用
+  const blockedPeriods =
+    override?.blockedPeriods != null
+      ? override.blockedPeriods
+      : filterBlockedPeriodsForDate(facility.blockedPeriods ?? [], date);
+
   return {
     openHour:            override?.openHour            ?? facility.openHour,
     closeHour:           override?.closeHour           ?? facility.closeHour,
     slotDurationMinutes: override?.slotDurationMinutes ?? facility.slotDurationMinutes,
-    // 曜日別設定に blockedPeriods があればそちらを優先し、なければ施設デフォルトを使う
-    // 古い Firestore ドキュメントは blockedPeriods を持たない場合があるため ?? [] でガード
-    blockedPeriods: override?.blockedPeriods ?? facility.blockedPeriods ?? [],
+    blockedPeriods,
   };
 }
 
