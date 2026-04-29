@@ -14,7 +14,9 @@ import {
 import { isFacilityUnavailableOnDate, isWithinOperatingHours, calcEndTime } from '../domain/availability';
 import { todayJst } from '../domain/date';
 import { buildDashboardStats, buildDashboardWindows } from '../domain/dashboardStats';
+import { buildReservationIcal } from '../domain/ical';
 import { sendCancellationNotification, sendReservationConfirmation } from '../domain/notification';
+import { buildMyReservationUrl } from '../domain/notificationTemplate';
 import { rateLimitByIp, requireAdmin, getActor } from './middleware';
 import {
   CancelReservationSchema,
@@ -201,6 +203,41 @@ router.post('/lookup', lookupRateLimit, async (req: Request, res: Response) => {
   }
 
   res.json({ success: true, reservation: toPublicView(reservation) });
+});
+
+/**
+ * POST /reservations/lookup/ical — 予約番号＋メールから iCal (.ics) をダウンロード
+ * 認証は通常の lookup と同じ二要素（reservationCode + email）。レートリミットも共用。
+ */
+router.post('/lookup/ical', lookupRateLimit, async (req: Request, res: Response) => {
+  const parsed = LookupReservationSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: '入力内容を確認してください' },
+    });
+    return;
+  }
+
+  const reservation = await findReservationByCodeAndEmail(parsed.data.reservationCode, parsed.data.email);
+  if (!reservation) {
+    res.status(404).json({
+      success: false,
+      error: { code: 'NOT_FOUND', message: NOT_FOUND_MESSAGE },
+    });
+    return;
+  }
+
+  const code = reservation.reservationId.slice(0, 8).toUpperCase();
+  // buildMyReservationUrl は FRONTEND_BASE_URL 未設定時に相対パスを返すが、
+  // iCalendar の URL プロパティは絶対URI前提。絶対URL のときだけ iCal に含める。
+  const candidateUrl = buildMyReservationUrl(code, process.env.FRONTEND_BASE_URL);
+  const myReservationUrl = /^https?:\/\//i.test(candidateUrl) ? candidateUrl : undefined;
+  const ics = buildReservationIcal(reservation, { myReservationUrl });
+
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="tri-force-koenji-${code}.ics"`);
+  res.send(ics);
 });
 
 /** POST /reservations/lookup-by-email — メールアドレスから自分のアクティブ予約一覧を取得 */

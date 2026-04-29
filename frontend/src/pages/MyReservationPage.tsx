@@ -13,6 +13,7 @@ import {
 } from '@/types';
 import {
   cancelReservationByMember,
+  downloadReservationIcal,
   lookupReservation,
   lookupReservationsByEmail,
   resendConfirmationByEmail,
@@ -68,6 +69,8 @@ export function MyReservationPage() {
       setCredentials({ reservationCode: variables.reservationCode, email: variables.email });
       setConfirmingCancel(false);
       setCancelReason('');
+      // 別予約に切り替わった際、前の icalMutation のエラーが残らないようリセット
+      icalMutation.reset();
     },
   });
 
@@ -116,6 +119,10 @@ export function MyReservationPage() {
   }
 
   // ─── キャンセル ──────────────────────────────────────────────────────────
+  const icalMutation = useMutation({
+    mutationFn: downloadReservationIcal,
+  });
+
   const cancelMutation = useMutation({
     mutationFn: cancelReservationByMember,
     onSuccess: (data) => {
@@ -158,6 +165,7 @@ export function MyReservationPage() {
     setCancelReason('');
     lookupMutation.reset();
     emailListMutation.reset();
+    icalMutation.reset();
   }
 
   const isPast = reservation ? reservation.date < todayJst() : false;
@@ -406,13 +414,28 @@ export function MyReservationPage() {
             )}
 
             {canCancel && !confirmingCancel && (
-              <button
-                type="button"
-                onClick={() => setConfirmingCancel(true)}
-                className="btn-danger"
-              >
-                この予約をキャンセルする
-              </button>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => credentials && icalMutation.mutate(credentials)}
+                  disabled={!credentials || icalMutation.isPending}
+                  className="btn-secondary"
+                >
+                  {icalMutation.isPending ? 'ダウンロード中…' : 'カレンダーに追加 (.ics)'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingCancel(true)}
+                  className="btn-danger"
+                >
+                  この予約をキャンセルする
+                </button>
+              </div>
+            )}
+            {icalMutation.isError && (
+              <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+                {(icalMutation.error as Error).message}
+              </p>
             )}
 
             {canCancel && confirmingCancel && (
