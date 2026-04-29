@@ -68,6 +68,66 @@ describe('generateSlots', () => {
     expect(slotsTue[0].startTime).toBe('09:00');
     expect(slotsTue[11].endTime).toBe('21:00');
   });
+
+  it('全体 blockedPeriods が設定されていたらそのスロットを除外する', () => {
+    // 9:00〜21:00 60分枠で、12:00〜14:00 をブロック → 10スロット
+    const facility: Facility = {
+      ...baseFacility,
+      blockedPeriods: [{ startTime: '12:00', endTime: '14:00' }],
+    };
+    const slots = generateSlots(facility, '2026-03-23'); // 月曜日
+    expect(slots).toHaveLength(10);
+    expect(slots.find((s) => s.startTime === '12:00')).toBeUndefined();
+    expect(slots.find((s) => s.startTime === '13:00')).toBeUndefined();
+    expect(slots.find((s) => s.startTime === '11:00')).toBeDefined();
+    expect(slots.find((s) => s.startTime === '14:00')).toBeDefined();
+  });
+
+  it('曜日別 blockedPeriods が全体設定を上書きする', () => {
+    // 全体は 12:00〜14:00 ブロック、月曜は 10:00〜11:00 のみブロック
+    const facility: Facility = {
+      ...baseFacility,
+      blockedPeriods: [{ startTime: '12:00', endTime: '14:00' }],
+      weekdayHours: [{
+        weekday: 1, openHour: 9, closeHour: 21,
+        blockedPeriods: [{ startTime: '10:00', endTime: '11:00' }],
+      }],
+    };
+    const slots = generateSlots(facility, '2026-03-23'); // 月曜日
+    // 9:00〜21:00 60分枠 12スロット、10:00〜11:00 ブロック → 11スロット
+    expect(slots).toHaveLength(11);
+    expect(slots.find((s) => s.startTime === '10:00')).toBeUndefined();
+    expect(slots.find((s) => s.startTime === '12:00')).toBeDefined(); // 全体設定は上書き済み
+  });
+
+  it('weekdays スコープ付き blockedPeriods は指定曜日のみ有効', () => {
+    // 月曜(1)のみ 12:00〜14:00 をブロック
+    const facility: Facility = {
+      ...baseFacility,
+      blockedPeriods: [{ startTime: '12:00', endTime: '14:00', weekdays: [1] }],
+    };
+    const slotsMonday = generateSlots(facility, '2026-03-23'); // 月曜
+    expect(slotsMonday).toHaveLength(10); // 12スロット - 2 = 10
+    expect(slotsMonday.find((s) => s.startTime === '12:00')).toBeUndefined();
+
+    const slotsTuesday = generateSlots(facility, '2026-03-31'); // 火曜（別週）
+    expect(slotsTuesday).toHaveLength(12); // 月曜限定なので火曜は全スロット
+    expect(slotsTuesday.find((s) => s.startTime === '12:00')).toBeDefined();
+  });
+
+  it('dates スコープ付き blockedPeriods は指定日のみ有効', () => {
+    // 2026-03-23 のみ 12:00〜14:00 をブロック
+    const facility: Facility = {
+      ...baseFacility,
+      blockedPeriods: [{ startTime: '12:00', endTime: '14:00', dates: ['2026-03-23'] }],
+    };
+    const slotsOnDate = generateSlots(facility, '2026-03-23'); // 指定日
+    expect(slotsOnDate).toHaveLength(10); // ブロック適用
+
+    const slotsOtherDate = generateSlots(facility, '2026-03-25'); // 別の日（水曜）
+    expect(slotsOtherDate).toHaveLength(12); // ブロック非適用
+    expect(slotsOtherDate.find((s) => s.startTime === '12:00')).toBeDefined();
+  });
 });
 
 describe('isWithinOperatingHours', () => {
@@ -98,6 +158,17 @@ describe('isWithinOperatingHours', () => {
     expect(isWithinOperatingHours(facility, '2026-03-23', '09:00')).toBe(false); // デフォルト開始前
     expect(isWithinOperatingHours(facility, '2026-03-23', '17:00')).toBe(true);
     expect(isWithinOperatingHours(facility, '2026-03-23', '18:00')).toBe(false); // 終了時刻はNG
+  });
+
+  it('blockedPeriods に含まれる時刻は false を返す', () => {
+    const facility: Facility = {
+      ...baseFacility,
+      blockedPeriods: [{ startTime: '12:00', endTime: '14:00' }],
+    };
+    expect(isWithinOperatingHours(facility, '2026-03-23', '12:00')).toBe(false);
+    expect(isWithinOperatingHours(facility, '2026-03-23', '13:00')).toBe(false);
+    expect(isWithinOperatingHours(facility, '2026-03-23', '11:00')).toBe(true);
+    expect(isWithinOperatingHours(facility, '2026-03-23', '14:00')).toBe(true);
   });
 });
 

@@ -1,6 +1,7 @@
 export type {
   Facility,
   WeekdayHours,
+  BlockedPeriod,
   CreateFacilityInput,
   UpdateFacilityInput,
   Reservation,

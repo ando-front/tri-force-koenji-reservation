@@ -25,6 +25,23 @@ function normalizeDateList(value: unknown): string[] {
   return [...new Set(value.filter((item): item is string => typeof item === 'string'))].sort();
 }
 
+function normalizeBlockedPeriods(value: unknown): import('../../../shared/types').BlockedPeriod[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object')
+    .map((item) => ({
+      startTime: String(item.startTime ?? '00:00'),
+      endTime:   String(item.endTime   ?? '00:00'),
+      ...(Array.isArray(item.weekdays) && item.weekdays.length > 0
+        ? { weekdays: item.weekdays.map(Number).filter((n: number) => n >= 0 && n <= 6) }
+        : {}),
+      ...(Array.isArray(item.dates) && item.dates.length > 0
+        ? { dates: item.dates.filter((d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) }
+        : {}),
+    }))
+    .filter((bp) => /^\d{2}:\d{2}$/.test(bp.startTime) && /^\d{2}:\d{2}$/.test(bp.endTime) && bp.endTime > bp.startTime);
+}
+
 function normalizeWeekdayHours(value: unknown): WeekdayHours[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -35,6 +52,10 @@ function normalizeWeekdayHours(value: unknown): WeekdayHours[] {
       closeHour: Number(item.closeHour),
       ...(item.slotDurationMinutes !== undefined && item.slotDurationMinutes !== null
         ? { slotDurationMinutes: Number(item.slotDurationMinutes) }
+        : {}),
+      // blockedPeriods が Firestore に存在する場合のみ設定（undefined = 施設レベルに委譲）
+      ...(item.blockedPeriods !== undefined
+        ? { blockedPeriods: normalizeBlockedPeriods(item.blockedPeriods) }
         : {}),
     }))
     .filter((wh) => wh.weekday >= 0 && wh.weekday <= 6)
@@ -56,6 +77,7 @@ function normalizeFacility(docId: string, data: Record<string, unknown>): Facili
       : [],
     maintenanceDates: normalizeDateList(data.maintenanceDates),
     weekdayHours: normalizeWeekdayHours(data.weekdayHours),
+    blockedPeriods: normalizeBlockedPeriods(data.blockedPeriods),
     isActive: Boolean(data.isActive ?? true),
     createdAt: data.createdAt ?? nowFallback,
     updatedAt: data.updatedAt ?? nowFallback,

@@ -148,8 +148,10 @@ router.post('/', createRateLimit, async (req: Request, res: Response) => {
       facilityId: reservation.facilityId,
     });
 
-    // メール送信は send 関数側で例外を握り潰すので fire-and-forget で良い
-    void sendReservationConfirmation(reservation);
+    // メール送信は send 関数側で例外を握り潰す。
+    // Cloud Run では HTTP レスポンス送信後に CPU がスロットルされるため、
+    // レスポンスを返す前に await して確実に送信完了させる。
+    await sendReservationConfirmation(reservation);
 
     res.status(201).json({
       success:       true,
@@ -221,7 +223,35 @@ router.post('/lookup-by-email', lookupRateLimit, async (req: Request, res: Respo
   });
 });
 
-/** POST /reservations/lookup/cancel — 会員自身が予約をキャンセルする */
+/** POST /reservations/resend-confirmation — 確認メールを再送する（認証不要） */
+// 悪用防止のため resend 専用の厳しめレートリミットを設ける。
+const resendRateLimit = rateLimitByIp({ windowMs: 10 * 60 * 1000, max: 3, key: 'resend-confirmation' });
+
+router.post('/resend-confirmation', resendRateLimit, async (req: Request, res: Response) => {
+  const parsed = LookupReservationsByEmailSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: '入力内容を確認してください' },
+    });
+    return;
+  }
+
+  const reservations = await listActiveReservationsByEmail(parsed.data.email, todayJst());
+
+  // プライバシー上、予約の有無は明かさず常に成功を返す。
+  // アクティブ予約の確認メールを並列送信し、個別の失敗はログに記録する。
+  const results = await Promise.allSettled(reservations.map((r) => sendReservationConfirmation(r)));
+  results.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      console.error(`[resend-confirmation] email ${i} failed:`, result.reason);
+    }
+  });
+
+  res.json({ success: true });
+});
+
+
 router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Response) => {
   const parsed = CancelReservationSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -271,8 +301,8 @@ router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Respons
     facilityId: reservation.facilityId,
   });
 
-  // キャンセル通知メール（send 側で例外を握り潰す fire-and-forget）
-  void sendCancellationNotification(updated, {
+  // キャンセル通知メール（send 側で例外を握り潰す。Cloud Run CPU スロットル対策で await）
+  await sendCancellationNotification(updated, {
     triggeredBy:  'member',
     cancelReason: reason,
   });
@@ -351,9 +381,9 @@ router.patch('/admin/:id/status', requireAdmin, async (req: Request, res: Respon
     const action = status === 'confirmed' ? 'reservation.confirmed' : 'reservation.cancelled';
     await writeAuditLog(getActor(req), action, req.params.id, { status, cancelReason });
 
-    // キャンセル時は会員に通知（管理者起因・send 側で例外を握り潰す）
+    // キャンセル時は会員に通知（管理者起因・send 側で例外を握り潰す。Cloud Run CPU スロットル対策で await）
     if (status === 'cancelled') {
-      void sendCancellationNotification(updated, {
+      await sendCancellationNotification(updated, {
         triggeredBy:  'admin',
         cancelReason: cancelReason ?? '',
       });
