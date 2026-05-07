@@ -1,5 +1,42 @@
-import { buildReservationIcal } from './ical';
+import { buildMyReservationUrl, buildReservationIcal } from './ical';
 import type { Reservation } from '../../../shared/types';
+
+describe('buildMyReservationUrl', () => {
+  it('絶対URL ベースを使う場合は origin と path を結合する', () => {
+    expect(buildMyReservationUrl('ABC12345', 'https://example.com'))
+      .toBe('https://example.com/my-reservation?code=ABC12345');
+  });
+
+  it('末尾スラッシュ付きの origin でも正しく結合する', () => {
+    expect(buildMyReservationUrl('ABC12345', 'https://example.com/'))
+      .toBe('https://example.com/my-reservation?code=ABC12345');
+  });
+
+  it('baseUrl 未指定時は相対パスを返す', () => {
+    expect(buildMyReservationUrl('ABC12345')).toBe('/my-reservation?code=ABC12345');
+  });
+
+  it('javascript: や data: 等の非安全スキームは相対パスへ落とす', () => {
+    expect(buildMyReservationUrl('ABC12345', 'javascript:alert(1)'))
+      .toBe('/my-reservation?code=ABC12345');
+    expect(buildMyReservationUrl('ABC12345', 'data:text/html,foo'))
+      .toBe('/my-reservation?code=ABC12345');
+  });
+
+  it('URL としてパースできない値は相対パスへ落とす', () => {
+    expect(buildMyReservationUrl('ABC12345', 'not-a-url')).toBe('/my-reservation?code=ABC12345');
+    expect(buildMyReservationUrl('ABC12345', '')).toBe('/my-reservation?code=ABC12345');
+  });
+
+  it('path/query/hash 付きの baseUrl は誤設定とみなして相対パスへ落とす', () => {
+    expect(buildMyReservationUrl('ABC12345', 'https://example.com/sub/path'))
+      .toBe('/my-reservation?code=ABC12345');
+    expect(buildMyReservationUrl('ABC12345', 'https://example.com?x=1'))
+      .toBe('/my-reservation?code=ABC12345');
+    expect(buildMyReservationUrl('ABC12345', 'https://example.com#frag'))
+      .toBe('/my-reservation?code=ABC12345');
+  });
+});
 
 function makeReservation(overrides: Partial<Reservation> = {}): Reservation {
   return {

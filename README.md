@@ -15,7 +15,7 @@
 - 予約者名公開表示（他の利用者が誰が予約しているか確認可能）
 - 施設管理（定休日・メンテナンス日・定員・営業時間の設定）
 - 管理画面（予約一覧・キャンセル・施設管理、Googleアカウント認証）
-- メール通知（予約確認メールを Resend 経由で送信）
+- 会員セルフサービス（予約番号 or メールアドレスから予約照会・キャンセル・iCal ダウンロード）
 - 利用案内ページ（`/guide`）
 
 ---
@@ -43,7 +43,6 @@ Cloud Functions v2 (Express, TypeScript, asia-northeast1)
 | バックエンド | Cloud Functions v2 (Node.js 20, TypeScript, Express) |
 | データベース | Cloud Firestore |
 | 認証 | Firebase Authentication (Googleログイン) |
-| メール | Resend |
 | ホスティング | Firebase Hosting |
 | CI/CD | GitHub Actions |
 
@@ -157,10 +156,8 @@ npm run seed:facilities
 
 | 変数名 | 説明 |
 |---|---|
-| `RESEND_API_KEY` | Resend APIキー |
-| `MAIL_FROM` | 送信元メールアドレス |
-| `ADMIN_MAIL_BCC` | 管理者BCC先 |
 | `ALLOWED_ORIGINS` | CORSを許可するオリジン（カンマ区切り） |
+| `FRONTEND_BASE_URL` | iCal の URL プロパティに使うフロントベースURL |
 
 ### frontend/.env
 

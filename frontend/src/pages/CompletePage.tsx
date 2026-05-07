@@ -31,13 +31,14 @@ export function CompletePage() {
               <dd className="font-mono font-medium">{response.reservationId.slice(0, 8).toUpperCase()}</dd>
             </div>
             <p className="text-xs text-gray-500 pt-1">
-              予約番号はキャンセルや内容確認の際に必要です。必ず控えておいてください。
+              この予約番号はキャンセルや内容確認の際に必要です。必ず控えておいてください。
+              番号を忘れた場合は「予約の確認・キャンセル」ページでメールアドレスからも検索できます。
             </p>
           </dl>
         ) : null}
 
         <p className="text-sm text-gray-500">
-          {response?.message ?? '予約内容を受け付けました。確認メールをご確認ください。'}
+          {response?.message ?? '予約内容を受け付けました。表示された予約番号を必ず控えてください。'}
         </p>
 
         <div className="space-y-2">

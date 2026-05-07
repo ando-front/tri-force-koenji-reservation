@@ -8,7 +8,6 @@ import {
   CancelReservationSchema,
   LookupReservationSchema,
   LookupReservationsByEmailSchema,
-  type PublicReservationSummary,
   type PublicReservationView,
 } from '@/types';
 import {
@@ -16,7 +15,6 @@ import {
   downloadReservationIcal,
   lookupReservation,
   lookupReservationsByEmail,
-  resendConfirmationByEmail,
 } from '@/lib/api';
 import { formatReservationDisplayName } from '@/lib/reservationDisplay';
 
@@ -49,8 +47,8 @@ export function MyReservationPage() {
   const [credentials, setCredentials] = useState<{ reservationCode: string; email: string } | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [confirmingCancel, setConfirmingCancel] = useState(false);
-  // メールで一覧モードで取得した予約サマリ一覧（reservationCode は含まない）
-  const [emailMatches, setEmailMatches] = useState<PublicReservationSummary[] | null>(null);
+  // メールで一覧モードで取得した予約一覧（予約番号入り）
+  const [emailMatches, setEmailMatches] = useState<PublicReservationView[] | null>(null);
   const [emailUsedForList, setEmailUsedForList] = useState<string>('');
 
   // ─── 予約番号で照会 ────────────────────────────────────────────────────────
@@ -69,7 +67,6 @@ export function MyReservationPage() {
       setCredentials({ reservationCode: variables.reservationCode, email: variables.email });
       setConfirmingCancel(false);
       setCancelReason('');
-      // 別予約に切り替わった際、前の icalMutation のエラーが残らないようリセット
       icalMutation.reset();
     },
   });
@@ -88,34 +85,21 @@ export function MyReservationPage() {
       setEmailMatches(data);
       setEmailUsedForList(variables.email);
       setReservation(null);
-      resendMutation.reset();
     },
   });
 
   const onEmailSubmit = emailForm.handleSubmit((data) => emailListMutation.mutate(data));
 
-  // ─── 確認メール再送 ──────────────────────────────────────────────────────
-  const resendMutation = useMutation({
-    mutationFn: resendConfirmationByEmail,
-  });
-
   /**
-   * 一覧で選んだ予約はサマリのみで reservationCode を持たないため、
-   * 「予約番号で照会」タブにメールだけプリフィルした状態で誘導する。
-   * これにより本人確認として予約番号入力が必須となり、メールだけでの
-   * 詳細閲覧・キャンセルを防止する。
+   * 一覧で選んだ予約を詳細表示に切り替える。一覧は予約番号付きで取得済みのため、
+   * 追加の予約番号入力なしで詳細・キャンセルへ進める。
    */
-  function jumpToCodeLookupFromList() {
-    codeForm.setValue('email', emailUsedForList);
-    codeForm.setValue('reservationCode', '');
-    setMode('code');
-    setReservation(null);
-    setEmailMatches(null);
-    // reservationCode 入力欄にフォーカス
-    requestAnimationFrame(() => {
-      const el = document.getElementById('reservationCode') as HTMLInputElement | null;
-      el?.focus();
-    });
+  function openFromList(view: PublicReservationView) {
+    setReservation(view);
+    setCredentials({ reservationCode: view.reservationCode, email: emailUsedForList });
+    setConfirmingCancel(false);
+    setCancelReason('');
+    icalMutation.reset();
   }
 
   // ─── キャンセル ──────────────────────────────────────────────────────────
@@ -128,20 +112,9 @@ export function MyReservationPage() {
     onSuccess: (data) => {
       setReservation(data);
       setConfirmingCancel(false);
-      // 一覧側のキャッシュも更新（キャンセル済みは一覧から消す）。
-      // 関数型 setState で古いクロージャを参照しないようにする。
-      // Summary には reservationCode が無いため、日付＋施設＋開始時刻で同定する。
+      // 一覧側のキャッシュも更新（キャンセル済みは一覧から消す）
       setEmailMatches((prev) =>
-        prev
-          ? prev.filter(
-              (m) =>
-                !(
-                  m.date === data.date &&
-                  m.startTime === data.startTime &&
-                  m.facilityId === data.facilityId
-                )
-            )
-          : prev,
+        prev ? prev.filter((m) => m.reservationCode !== data.reservationCode) : prev,
       );
     },
   });
@@ -180,7 +153,7 @@ export function MyReservationPage() {
           </Link>
           <h1 className="mt-3 text-2xl font-bold text-gray-900">予約の確認・キャンセル</h1>
           <p className="mt-2 text-sm text-gray-600">
-            予約番号で個別に確認するか、メールアドレスでアクティブな予約を一覧表示できます。
+            予約番号で個別に確認するか、メールアドレスで本日以降のアクティブな予約を一覧表示できます。
           </p>
         </header>
 
@@ -280,8 +253,8 @@ export function MyReservationPage() {
                 <p className="form-error">{emailForm.formState.errors.email.message}</p>
               )}
               <p className="mt-1 text-xs text-gray-500">
-                予約完了メールに記載のアドレスを入力してください。プライバシー保護のため、
-                未来日のアクティブな予約のみが表示されます（過去・キャンセル済みは表示しません）。
+                予約時に入力したアドレスを入力してください。本日以降のアクティブな予約のみが表示されます
+                （過去・キャンセル済みは表示しません）。
               </p>
             </div>
 
@@ -305,68 +278,38 @@ export function MyReservationPage() {
                 該当する本日以降のアクティブな予約はありません。
               </p>
             ) : (
-              <>
-                <ul className="divide-y divide-gray-100">
-                  {emailMatches.map((m, idx) => (
-                    <li key={`${m.date}-${m.startTime}-${m.facilityId}-${idx}`} className="py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-gray-900">{m.facilityName}</p>
-                          <p className="text-xs text-gray-500">
-                            {m.date} {m.startTime} 〜 {m.endTime} ／ {m.participants}名
-                          </p>
-                        </div>
+              <ul className="divide-y divide-gray-100">
+                {emailMatches.map((m) => (
+                  <li key={m.reservationCode} className="py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900">{m.facilityName}</p>
+                        <p className="text-xs text-gray-500">
+                          {m.date} {m.startTime} 〜 {m.endTime} ／ {m.participants}名
+                        </p>
+                        <p className="mt-1 font-mono text-xs text-gray-400">#{m.reservationCode}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
                         <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                             STATUS_COLOR[m.status] ?? 'bg-gray-100 text-gray-600'
                           }`}
                         >
                           {STATUS_LABEL[m.status] ?? m.status}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => openFromList(m)}
+                          className="text-xs text-brand-600 hover:underline"
+                        >
+                          詳細・キャンセル
+                        </button>
                       </div>
-                    </li>
-                  ))}
-                </ul>
-                <div className="rounded-md border border-brand-100 bg-brand-50/40 p-3 text-xs text-brand-800">
-                  個別の詳細表示・キャンセルには予約番号が必要です。予約番号は予約完了メールの件名・本文に記載されています。
-                </div>
-                <button
-                  type="button"
-                  onClick={jumpToCodeLookupFromList}
-                  className="btn-primary w-full"
-                >
-                  予約番号を入力して詳細・キャンセルへ進む
-                </button>
-              </>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
-
-            {/* 確認メール再送 */}
-            <div className="border-t border-gray-100 pt-4">
-              <p className="text-xs text-gray-500 mb-2">
-                確認メールが見つからない場合は、予約番号入りの確認メールを再送できます。
-              </p>
-              {resendMutation.isSuccess ? (
-                <p className="rounded-md bg-green-50 p-3 text-sm text-green-800">
-                  確認メールを再送しました。しばらくしてからメールをご確認ください。
-                </p>
-              ) : (
-                <>
-                  {resendMutation.isError && (
-                    <p className="rounded-md bg-red-50 p-3 text-sm text-red-700 mb-2">
-                      {resendMutation.error?.message ?? '再送に失敗しました。しばらく後に再試行してください。'}
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => resendMutation.mutate({ email: emailUsedForList })}
-                    disabled={resendMutation.isPending || !emailUsedForList}
-                    className="btn-secondary w-full text-sm disabled:opacity-40"
-                  >
-                    {resendMutation.isPending ? '送信中…' : '確認メール（予約番号入り）を再送する'}
-                  </button>
-                </>
-              )}
-            </div>
           </div>
         )}
 
