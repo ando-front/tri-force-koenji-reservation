@@ -12,7 +12,6 @@ import type {
   ListReservationsQuery,
   LookupReservationInput,
   LookupReservationsByEmailInput,
-  PublicReservationSummary,
   PublicReservationView,
   Reservation,
   UpdateUsageGuideContentInput,
@@ -149,34 +148,18 @@ export async function downloadReservationIcal(
 }
 
 /**
- * メールアドレスから自分のアクティブ予約一覧（サマリ）を取得（会員向け）。
- * セキュリティ上、reservationCode は返ってこない。詳細・キャンセルには
- * 別途予約番号入力（`lookupReservation`）が必要。
+ * メールアドレスから自分のアクティブ予約（予約番号付き）を取得（会員向け）。
+ * 確認メールを送らない運用のため、予約番号を含めて返し、追加入力なしで
+ * 詳細閲覧・キャンセルまで完結できるようにする。
  */
 export function lookupReservationsByEmail(
   payload: LookupReservationsByEmailInput,
-): Promise<PublicReservationSummary[]> {
-  return request<{ reservations: PublicReservationSummary[] }>('/reservations/lookup-by-email', {
+): Promise<PublicReservationView[]> {
+  return request<{ reservations: PublicReservationView[] }>('/reservations/lookup-by-email', {
     method: 'POST',
     body:   JSON.stringify(payload),
   }).then((res) => res.reservations);
 }
-
-/**
- * アクティブな予約の確認メール（予約番号入り）を再送する（会員向け）。
- * 指定メールアドレスのアクティブ予約があれば各予約の確認メールを再送する。
- * プライバシー保護のため、予約の有無に関係なく成功を返す。
- */
-export function resendConfirmationByEmail(
-  payload: LookupReservationsByEmailInput,
-): Promise<void> {
-  return request<void>('/reservations/resend-confirmation', {
-    method: 'POST',
-    body:   JSON.stringify(payload),
-  });
-}
-
-
 
 /** 施設一覧を取得（管理者） */
 export function adminListFacilities(): Promise<Facility[]> {

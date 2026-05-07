@@ -1,6 +1,30 @@
 import type { Reservation, ReservationStatus } from '../../../shared/types';
 
 /**
+ * 会員向け予約確認・キャンセル画面への URL を生成する。
+ * baseUrl は http(s) スキームの origin（scheme + host + port）であることを期待し、
+ * 不正・未設定時は相対パスへフォールバックする。
+ */
+export function buildMyReservationUrl(code: string, baseUrl?: string): string {
+  const path = `/my-reservation?code=${encodeURIComponent(code)}`;
+  if (!baseUrl) return path;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    return path;
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return path;
+  if (parsed.pathname !== '/' && parsed.pathname !== '') return path;
+  if (parsed.search) return path;
+  if (parsed.hash)   return path;
+
+  return `${parsed.origin}${path}`;
+}
+
+/**
  * 予約から iCalendar (RFC 5545) 形式の文字列を生成する純関数。
  *
  * - すべての時刻は JST (Asia/Tokyo, UTC+9) と解釈し、UTC に変換した

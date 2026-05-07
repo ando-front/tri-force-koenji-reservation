@@ -150,8 +150,6 @@ export interface Reservation {
   updatedAt: unknown;
   cancelledAt?: unknown;
   cancelReason?: string;
-  /** リマインダーメール送信済みのタイムスタンプ。再送防止用 */
-  reminderSentAt?: unknown;
 }
 
 // ─── 管理者 ────────────────────────────────────────────────────────────────────
@@ -170,7 +168,6 @@ export type AuditAction =
   | 'reservation.confirmed'
   | 'reservation.cancelled'
   | 'reservation.deleted'
-  | 'reservation.reminder_sent'
   | 'content.updated';
 
 export interface AuditLog {
@@ -190,7 +187,7 @@ export const DEFAULT_USAGE_GUIDE_CONTENT: UsageGuideContent = {
     '施設と日付を選択し、空き時間帯を確認します。',
     '表示されている予約者名を確認し、希望枠を選択します。',
     'ニックネーム（任意）、メールアドレス、参加人数、利用目的を入力して送信します。',
-    '受付完了後、確認メールが届きます。',
+    '受付完了画面に表示される予約番号を必ず控えてください（後から「予約の確認・キャンセル」ページでも検索できます）。',
   ],
   notes: [
     '各時間帯には入力したニックネームを公開表示します。未入力の場合は「会員1」形式の表示名になります。',
@@ -324,23 +321,6 @@ export interface PublicReservationView {
   status: ReservationStatus;
   cancelledAt?: unknown;
   cancelReason?: string;
-}
-
-/**
- * メールアドレス検索の一覧表示用サマリ。
- * セキュリティ上、`reservationCode` や `purpose`/`remarks`/`memberName` 等は含めない。
- * これは `lookup-by-email` がメール所有のみで照会できるため、ここで予約番号を返してしまうと
- * その値を `lookup/cancel` に渡せて事実上「メール一発でキャンセル可能」になってしまう。
- * 詳細閲覧・キャンセルには別途予約番号の入力（`lookup` フロー）が必要。
- */
-export interface PublicReservationSummary {
-  facilityId: string;
-  facilityName: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  participants: number;
-  status: ReservationStatus;
 }
 
 /** GET /availability レスポンスの各スロット */

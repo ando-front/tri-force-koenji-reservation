@@ -14,16 +14,13 @@ import {
 import { isFacilityUnavailableOnDate, isWithinOperatingHours, calcEndTime } from '../domain/availability';
 import { todayJst } from '../domain/date';
 import { buildDashboardStats, buildDashboardWindows } from '../domain/dashboardStats';
-import { buildReservationIcal } from '../domain/ical';
-import { sendCancellationNotification, sendReservationConfirmation } from '../domain/notification';
-import { buildMyReservationUrl } from '../domain/notificationTemplate';
+import { buildMyReservationUrl, buildReservationIcal } from '../domain/ical';
 import { rateLimitByIp, requireAdmin, getActor } from './middleware';
 import {
   CancelReservationSchema,
   CreateReservationSchema,
   LookupReservationSchema,
   LookupReservationsByEmailSchema,
-  PublicReservationSummary,
   PublicReservationView,
   Reservation,
   UpdateStatusSchema,
@@ -33,23 +30,6 @@ import {
 import type { ZodIssue } from 'zod';
 
 const router = Router();
-
-/**
- * メール検索の一覧表示用サマリへ落とす。
- * メールアドレス所有のみで照会できるエンドポイントから返るため、
- * reservationCode や利用目的・備考・氏名など個別の機微情報は含めない。
- */
-function toPublicSummary(reservation: Reservation): PublicReservationSummary {
-  return {
-    facilityId:   reservation.facilityId,
-    facilityName: reservation.facilityName,
-    date:         reservation.date,
-    startTime:    reservation.startTime,
-    endTime:      reservation.endTime,
-    participants: reservation.participants,
-    status:       reservation.status,
-  };
-}
 
 /** 予約エンティティから会員向け表示用の項目だけ抜き出す */
 function toPublicView(reservation: Reservation): PublicReservationView {
@@ -150,15 +130,10 @@ router.post('/', createRateLimit, async (req: Request, res: Response) => {
       facilityId: reservation.facilityId,
     });
 
-    // メール送信は send 関数側で例外を握り潰す。
-    // Cloud Run では HTTP レスポンス送信後に CPU がスロットルされるため、
-    // レスポンスを返す前に await して確実に送信完了させる。
-    await sendReservationConfirmation(reservation);
-
     res.status(201).json({
       success:       true,
       reservationId: reservation.reservationId,
-      message:       '予約を受け付けました。確認メールをお送りしました。',
+      message:       '予約を受け付けました。表示された予約番号を必ず控えてください。',
     });
   } catch (err) {
     const e = err as { code?: string };
@@ -240,7 +215,11 @@ router.post('/lookup/ical', lookupRateLimit, async (req: Request, res: Response)
   res.send(ics);
 });
 
-/** POST /reservations/lookup-by-email — メールアドレスから自分のアクティブ予約一覧を取得 */
+/**
+ * POST /reservations/lookup-by-email — メールアドレスから自分のアクティブ予約一覧を取得。
+ * 確認メールを送らない運用のため、予約番号を含む詳細を返してメールアドレス入力のみで
+ * 詳細閲覧・キャンセルまで完結できるようにする。
+ */
 router.post('/lookup-by-email', lookupRateLimit, async (req: Request, res: Response) => {
   const parsed = LookupReservationsByEmailSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -254,38 +233,8 @@ router.post('/lookup-by-email', lookupRateLimit, async (req: Request, res: Respo
   const reservations = await listActiveReservationsByEmail(parsed.data.email, todayJst());
   res.json({
     success: true,
-    // セキュリティ: reservationCode を含む PublicReservationView ではなくサマリで返す。
-    // 詳細・キャンセルには別途 reservationCode を要求する `lookup`/`lookup/cancel` を経由させる。
-    reservations: reservations.map(toPublicSummary),
+    reservations: reservations.map(toPublicView),
   });
-});
-
-/** POST /reservations/resend-confirmation — 確認メールを再送する（認証不要） */
-// 悪用防止のため resend 専用の厳しめレートリミットを設ける。
-const resendRateLimit = rateLimitByIp({ windowMs: 10 * 60 * 1000, max: 3, key: 'resend-confirmation' });
-
-router.post('/resend-confirmation', resendRateLimit, async (req: Request, res: Response) => {
-  const parsed = LookupReservationsByEmailSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({
-      success: false,
-      error: { code: 'VALIDATION_ERROR', message: '入力内容を確認してください' },
-    });
-    return;
-  }
-
-  const reservations = await listActiveReservationsByEmail(parsed.data.email, todayJst());
-
-  // プライバシー上、予約の有無は明かさず常に成功を返す。
-  // アクティブ予約の確認メールを並列送信し、個別の失敗はログに記録する。
-  const results = await Promise.allSettled(reservations.map((r) => sendReservationConfirmation(r)));
-  results.forEach((result, i) => {
-    if (result.status === 'rejected') {
-      console.error(`[resend-confirmation] email ${i} failed:`, result.reason);
-    }
-  });
-
-  res.json({ success: true });
 });
 
 
@@ -336,12 +285,6 @@ router.post('/lookup/cancel', cancelRateLimit, async (req: Request, res: Respons
     date: reservation.date,
     startTime: reservation.startTime,
     facilityId: reservation.facilityId,
-  });
-
-  // キャンセル通知メール（send 側で例外を握り潰す。Cloud Run CPU スロットル対策で await）
-  await sendCancellationNotification(updated, {
-    triggeredBy:  'member',
-    cancelReason: reason,
   });
 
   res.json({ success: true, reservation: toPublicView(updated) });
@@ -417,14 +360,6 @@ router.patch('/admin/:id/status', requireAdmin, async (req: Request, res: Respon
 
     const action = status === 'confirmed' ? 'reservation.confirmed' : 'reservation.cancelled';
     await writeAuditLog(getActor(req), action, req.params.id, { status, cancelReason });
-
-    // キャンセル時は会員に通知（管理者起因・send 側で例外を握り潰す。Cloud Run CPU スロットル対策で await）
-    if (status === 'cancelled') {
-      await sendCancellationNotification(updated, {
-        triggeredBy:  'admin',
-        cancelReason: cancelReason ?? '',
-      });
-    }
 
     res.json({ success: true, reservation: updated });
   } catch (err) {
