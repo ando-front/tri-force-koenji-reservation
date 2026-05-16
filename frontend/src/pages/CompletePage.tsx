@@ -25,21 +25,26 @@ export function CompletePage() {
         <h1 className="text-2xl font-bold text-gray-900">予約が完了しました</h1>
 
         {response ? (
-          <dl className="rounded-md bg-gray-50 p-4 text-left text-sm space-y-2">
-            <div className="flex justify-between">
-              <dt className="text-gray-500">予約番号</dt>
-              <dd className="font-mono font-medium">{response.reservationId.slice(0, 8).toUpperCase()}</dd>
-            </div>
-            <p className="text-xs text-gray-500 pt-1">
-              この予約番号はキャンセルや内容確認の際に必要です。必ず控えておいてください。
-              番号を忘れた場合は「予約の確認・キャンセル」ページでメールアドレスからも検索できます。
-            </p>
-          </dl>
-        ) : null}
+          <>
+            <dl className="rounded-md bg-gray-50 p-4 text-left text-sm space-y-2">
+              <div className="flex justify-between">
+                <dt className="text-gray-500">予約番号</dt>
+                <dd className="font-mono font-medium">{response.reservationId.slice(0, 8).toUpperCase()}</dd>
+              </div>
+              <p className="text-xs text-gray-500 pt-1">
+                この予約番号はキャンセルや内容確認の際に必要です。必ず控えておいてください。
+                番号を忘れた場合は「予約の確認・キャンセル」ページでメールアドレスからも検索できます。
+              </p>
+            </dl>
 
-        <p className="text-sm text-gray-500">
-          {response?.message ?? '予約内容を受け付けました。表示された予約番号を必ず控えてください。'}
-        </p>
+            <p className="text-sm text-gray-500">{response.message}</p>
+          </>
+        ) : (
+          <p className="text-sm text-gray-500">
+            予約完了情報を表示できませんでした。ページを再読み込みすると番号は表示されません。
+            「予約の確認・キャンセル」ページで予約時のメールアドレスから本日以降の予約を一覧できます。
+          </p>
+        )}
 
         <div className="space-y-2">
           <Link

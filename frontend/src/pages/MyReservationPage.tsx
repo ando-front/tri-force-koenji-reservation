@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -42,7 +42,10 @@ function todayJst(): string {
 
 export function MyReservationPage() {
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<Mode>('code');
+  const initialCode = searchParams.get('code') ?? '';
+  // 予約番号を覚えているケースは少数のため、URL に code が付いていない限りは
+  // メールアドレスから検索できる「メールで一覧」タブを既定にする。
+  const [mode, setMode] = useState<Mode>(initialCode ? 'code' : 'email');
   const [reservation, setReservation] = useState<PublicReservationView | null>(null);
   const [credentials, setCredentials] = useState<{ reservationCode: string; email: string } | null>(null);
   const [cancelReason, setCancelReason] = useState('');
@@ -55,7 +58,7 @@ export function MyReservationPage() {
   const codeForm = useForm<LookupForm>({
     resolver: zodResolver(LookupReservationSchema),
     defaultValues: {
-      reservationCode: searchParams.get('code') ?? '',
+      reservationCode: initialCode,
       email:           '',
     },
   });
@@ -72,6 +75,18 @@ export function MyReservationPage() {
   });
 
   const onCodeSubmit = codeForm.handleSubmit((data) => lookupMutation.mutate(data));
+
+  // React Router は search パラメータのみの遷移ではコンポーネントを再マウントしないため、
+  // 既にこのページがマウントされている状態で `/my-reservation?code=XXXX` へ遷移しても
+  // 初期化時に1回だけ読んだ searchParams しか反映されない。
+  // URL に有効な code が積まれ直したら「予約番号で照会」タブへ切り替えてフォームへ転写する。
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('code') ?? '';
+    if (!codeFromUrl) return;
+    if (codeFromUrl === codeForm.getValues('reservationCode')) return;
+    codeForm.setValue('reservationCode', codeFromUrl);
+    setMode('code');
+  }, [searchParams, codeForm]);
 
   // ─── メールで一覧 ─────────────────────────────────────────────────────────
   const emailForm = useForm<LookupByEmailForm>({
@@ -153,7 +168,8 @@ export function MyReservationPage() {
           </Link>
           <h1 className="mt-3 text-2xl font-bold text-gray-900">予約の確認・キャンセル</h1>
           <p className="mt-2 text-sm text-gray-600">
-            予約番号で個別に確認するか、メールアドレスで本日以降のアクティブな予約を一覧表示できます。
+            予約時に入力したメールアドレスから本日以降の予約を一覧して、その場で確認・キャンセルできます。
+            予約番号を控えている場合は「予約番号で照会」タブから直接照会することもできます。
           </p>
         </header>
 
@@ -231,6 +247,18 @@ export function MyReservationPage() {
             <button type="submit" disabled={lookupMutation.isPending} className="btn-primary w-full">
               {lookupMutation.isPending ? '照会中…' : '予約を照会する'}
             </button>
+
+            <p className="text-xs text-gray-500">
+              予約番号がわからない場合は{' '}
+              <button
+                type="button"
+                onClick={() => switchMode('email')}
+                className="font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700"
+              >
+                「メールで一覧」タブ
+              </button>
+              {' '}からメールアドレスで検索できます。
+            </p>
           </form>
         )}
 
