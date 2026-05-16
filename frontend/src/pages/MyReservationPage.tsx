@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -75,6 +75,18 @@ export function MyReservationPage() {
   });
 
   const onCodeSubmit = codeForm.handleSubmit((data) => lookupMutation.mutate(data));
+
+  // React Router は search パラメータのみの遷移ではコンポーネントを再マウントしないため、
+  // 既にこのページがマウントされている状態で `/my-reservation?code=XXXX` へ遷移しても
+  // 初期化時に1回だけ読んだ searchParams しか反映されない。
+  // URL に有効な code が積まれ直したら「予約番号で照会」タブへ切り替えてフォームへ転写する。
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('code') ?? '';
+    if (!codeFromUrl) return;
+    if (codeFromUrl === codeForm.getValues('reservationCode')) return;
+    codeForm.setValue('reservationCode', codeFromUrl);
+    setMode('code');
+  }, [searchParams, codeForm]);
 
   // ─── メールで一覧 ─────────────────────────────────────────────────────────
   const emailForm = useForm<LookupByEmailForm>({
