@@ -56,7 +56,7 @@
         <mxCell id="p1-public-pages" value="公開ページ（React Router v6）&#10;&#10;・ReservationPage（予約フォーム）&#10;・CompletePage（完了 / 予約コード表示）&#10;・MyReservationPage（照会・キャンセル）&#10;・UsageGuidePage（利用案内）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;arcSize=8;" vertex="1" parent="1">
           <mxGeometry x="70" y="350" width="330" height="190" as="geometry" />
         </mxCell>
-        <mxCell id="p1-admin-pages" value="管理ページ（&lt;RequireAdmin&gt; ガード）&#10;&#10;・AdminLoginPage（Googleログイン）&#10;・AdminDashboardPage（統計）&#10;・AdminReservationList / Detail&#10;・AdminFacilityManagement&#10;・AdminContentPage / AdminAuditLogPage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;arcSize=8;" vertex="1" parent="1">
+        <mxCell id="p1-admin-pages" value="管理ページ（[RequireAdmin] ガード）&#10;&#10;・AdminLoginPage（Googleログイン）&#10;・AdminDashboardPage（統計）&#10;・AdminReservationList / Detail&#10;・AdminFacilityManagement&#10;・AdminContentPage / AdminAuditLogPage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;arcSize=8;" vertex="1" parent="1">
           <mxGeometry x="425" y="350" width="345" height="190" as="geometry" />
         </mxCell>
         <mxCell id="p1-shared" value="共通レイヤ&#10;&#10;components: AvailabilityGrid /&#10;　FacilitySelector / ReservationForm&#10;hooks: useAuth（認証状態Context）&#10;lib: api.ts（fetchクライアント）/&#10;　firebase.ts / reservationDisplay.ts&#10;state: TanStack Query + React Hook Form + Zod" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;arcSize=8;" vertex="1" parent="1">
@@ -195,7 +195,7 @@
             <mxPoint x="975" y="600" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="e-spa-fn-lbl" value="REST / JSON&#10;Authorization: Bearer &lt;idToken&gt;" style="edgeLabel;html=1;fontSize=10;fontColor=#2E6B33;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="e-spa-fn">
+        <mxCell id="e-spa-fn-lbl" value="REST / JSON&#10;Authorization: Bearer [idToken]" style="edgeLabel;html=1;fontSize=10;fontColor=#2E6B33;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="e-spa-fn">
           <mxGeometry x="0.1" y="0" relative="1" as="geometry" />
         </mxCell>
 
