@@ -1,0 +1,458 @@
+<mxfile host="app.diagrams.net" agent="tri-force-koenji-reservation" version="24.7.17">
+  <!-- =====================================================================
+       Tri-force Koenji 施設予約システム — アーキテクチャ図
+       Page 1: システム全体アーキテクチャ
+       Page 2: 予約作成データフロー（シーケンス）
+       Page 3: Firestore データモデル（ER 図）
+       編集方法: https://app.diagrams.net で本ファイルを開く / VS Code Draw.io 拡張
+       ===================================================================== -->
+
+  <!-- ================================================================= -->
+  <!-- PAGE 1 : システム全体アーキテクチャ                               -->
+  <!-- ================================================================= -->
+  <diagram name="1. システム全体" id="page-architecture">
+    <mxGraphModel dx="1422" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1150" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="p1-title" value="Tri-force Koenji 施設予約システム — システム全体アーキテクチャ" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="900" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-subtitle" value="Firebase Hosting + Cloud Functions v2 (Express) + Cloud Firestore / フルTypeScript・サーバーレス構成" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="40" y="54" width="900" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== TIER 1: Clients ===================== -->
+        <mxCell id="p1-clients" value="クライアント（ブラウザ / SPA）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;verticalAlign=top;fontSize=14;fontStyle=1;fontColor=#1A2B4A;arcSize=4;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="720" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-member" value="一般利用者&#10;&#10;・空き状況の閲覧&#10;・予約申込&#10;・予約照会 / キャンセル（コード+Email）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6C8EBF;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=12;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="135" width="320" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-admin" value="管理者&#10;&#10;・ダッシュボード（統計）&#10;・予約一覧 / 承認 / キャンセル&#10;・施設管理 / 利用案内CMS / 監査ログ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6C8EBF;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=12;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="410" y="135" width="320" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- CI/CD (top right) -->
+        <mxCell id="p1-cicd" value="GitHub Actions（CI / CD）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;verticalAlign=top;fontSize=14;fontStyle=1;fontColor=#5A1A1A;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="800" y="100" width="380" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-ci" value="ci.yml — PR時: lint / 型チェック / Jest（domain）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B85450;align=left;verticalAlign=middle;spacingLeft=10;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="820" y="135" width="340" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-deploy" value="deploy.yml — main push: build &amp; firebase deploy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B85450;align=left;verticalAlign=middle;spacingLeft=10;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="820" y="173" width="340" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-staging" value="staging.yml — 手動: staging チャンネルへデプロイ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B85450;align=left;verticalAlign=middle;spacingLeft=10;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="820" y="211" width="340" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== TIER 2: Hosting / SPA ===================== -->
+        <mxCell id="p1-hosting" value="Firebase Hosting（CDN + SSL自動）  —  React 18 + Vite SPA / TypeScript + Tailwind CSS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;verticalAlign=top;fontSize=14;fontStyle=1;fontColor=#6B3E00;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="40" y="310" width="1140" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-public-pages" value="公開ページ（React Router v6）&#10;&#10;・ReservationPage（予約フォーム）&#10;・CompletePage（完了 / 予約コード表示）&#10;・MyReservationPage（照会・キャンセル）&#10;・UsageGuidePage（利用案内）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="350" width="330" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-admin-pages" value="管理ページ（[RequireAdmin] ガード）&#10;&#10;・AdminLoginPage（Googleログイン）&#10;・AdminDashboardPage（統計）&#10;・AdminReservationList / Detail&#10;・AdminFacilityManagement&#10;・AdminContentPage / AdminAuditLogPage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="425" y="350" width="345" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-shared" value="共通レイヤ&#10;&#10;components: AvailabilityGrid /&#10;　FacilitySelector / ReservationForm&#10;hooks: useAuth（認証状態Context）&#10;lib: api.ts（fetchクライアント）/&#10;　firebase.ts / reservationDisplay.ts&#10;state: TanStack Query + React Hook Form + Zod" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="795" y="350" width="360" height="190" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== Firebase Auth (side) ===================== -->
+        <mxCell id="p1-auth" value="Firebase Authentication&#10;&#10;Google OAuth（管理者のみ）&#10;ID Token 発行 → API検証" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=12;fontStyle=0;fontColor=#5A4A00;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="350" width="220" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== TIER 3: Cloud Functions API ===================== -->
+        <mxCell id="p1-functions" value="Cloud Functions v2 — Express API（Node.js 20 / TypeScript / asia-northeast1）&#10;trust proxy・CORS allowlist・express.json 1MB制限" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;verticalAlign=top;fontSize=14;fontStyle=1;fontColor=#1E4620;arcSize=3;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="620" width="1140" height="320" as="geometry" />
+        </mxCell>
+
+        <!-- API routers -->
+        <mxCell id="p1-routers" value="api/ ルーター（Express Router）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E6;strokeColor=#82B366;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=12;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="70" y="668" width="360" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-r1" value="reservations.ts — 予約作成 / 照会 / キャンセル / 一覧(admin) / ステータス更新(admin) / stats(admin)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="85" y="700" width="330" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-r2" value="facilities.ts — 施設一覧(public) / 作成・更新(admin)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="85" y="752" width="330" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-r3" value="availability.ts — 空き枠生成 + 残数算出(public)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="85" y="794" width="330" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-r4" value="auditLogs.ts — 監査ログ一覧(admin)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="85" y="832" width="330" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-r5" value="content.ts — 利用案内CMS 取得(public) / 更新(admin)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="85" y="870" width="330" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- Middleware -->
+        <mxCell id="p1-mw" value="api/middleware.ts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E6;strokeColor=#82B366;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=12;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="450" y="668" width="320" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-mw1" value="requireAdmin — Firebase ID Token検証 + admins照合" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="465" y="700" width="290" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-mw2" value="rateLimitByIp — IP単位スライディングウィンドウ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="465" y="730" width="290" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-mw3" value="errorHandler — 統一JSONエラー応答" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="465" y="760" width="290" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- Domain -->
+        <mxCell id="p1-domain" value="domain/（純粋ロジック・Jestテスト対象）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E6;strokeColor=#82B366;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=12;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="450" y="800" width="320" height="118" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-d1" value="availability.ts — 枠生成 / 営業時間 / ブロック判定" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="465" y="830" width="290" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-d2" value="dashboardStats.ts — 統計集計" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="465" y="858" width="290" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-d3" value="ical.ts — iCalendar(.ics)生成　/　date.ts — JST日付" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="465" y="886" width="290" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- Infra repository -->
+        <mxCell id="p1-infra" value="infra/firestoreRepository.ts&#10;（データアクセス層）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E6;strokeColor=#82B366;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=12;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="790" y="668" width="365" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-i1" value="createReservation（トランザクション + 定員チェック）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="805" y="708" width="335" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-i2" value="listReservations / updateReservationStatus" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="805" y="744" width="335" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-i3" value="findReservationByCodeAndEmail / listByEmail" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="805" y="778" width="335" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-i4" value="getFacility / listFacilities / create / update" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="805" y="812" width="335" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-i5" value="writeAuditLog / listAuditLogs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="805" y="846" width="335" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-i6" value="get/setUsageGuideContent（CMS）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82B366;align=left;verticalAlign=middle;spacingLeft=8;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="805" y="880" width="335" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== TIER 4: Firestore ===================== -->
+        <mxCell id="p1-firestore" value="Cloud Firestore（NoSQL ドキュメントDB / セキュリティルールでクライアント直書き禁止・Functions経由のみ）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;verticalAlign=top;fontSize=14;fontStyle=1;fontColor=#3D2A52;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1000" width="1140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-c1" value="facilities&#10;施設マスタ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9673A6;verticalAlign=middle;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="70" y="1038" width="200" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-c2" value="reservations&#10;予約レコード" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9673A6;verticalAlign=middle;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="290" y="1038" width="200" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-c3" value="admins&#10;管理者（UID）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9673A6;verticalAlign=middle;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="510" y="1038" width="200" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-c4" value="auditLogs&#10;監査ログ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9673A6;verticalAlign=middle;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="730" y="1038" width="200" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-c5" value="siteContent&#10;利用案内CMS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9673A6;verticalAlign=middle;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="950" y="1038" width="200" height="62" as="geometry" />
+        </mxCell>
+
+        <!-- iCal external (right of firestore tier label area) -->
+        <mxCell id="p1-ical" value="iCalendar (.ics) エクスポート&#10;RFC 5545 / 会員がDL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;verticalAlign=middle;fontSize=11;fontColor=#333333;dashed=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="700" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== EDGES ===================== -->
+        <!-- member/admin -> Hosting (HTTPS) -->
+        <mxCell id="e-member-host" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6C8EBF;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="p1-member" target="p1-public-pages">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-member-host-lbl" value="HTTPS / SPA配信" style="edgeLabel;html=1;fontSize=10;fontColor=#3A567F;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="e-member-host">
+          <mxGeometry x="-0.2" y="0" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-admin-host" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#6C8EBF;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="p1-admin" target="p1-admin-pages">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- admin pages <-> Firebase Auth -->
+        <mxCell id="e-admin-auth" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#D6B656;strokeWidth=2;endArrow=block;startArrow=block;endFill=1;startFill=1;" edge="1" parent="1" source="p1-admin-pages" target="p1-auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-admin-auth-lbl" value="Googleログイン&#10;ID Token取得" style="edgeLabel;html=1;fontSize=10;fontColor=#7A6300;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="e-admin-auth">
+          <mxGeometry x="0.1" y="0" relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- SPA (api.ts) -> Functions -->
+        <mxCell id="e-spa-fn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#82B366;strokeWidth=2.5;endArrow=block;endFill=1;" edge="1" parent="1" source="p1-shared" target="p1-functions">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="975" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-spa-fn-lbl" value="REST / JSON&#10;Authorization: Bearer [idToken]" style="edgeLabel;html=1;fontSize=10;fontColor=#2E6B33;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="e-spa-fn">
+          <mxGeometry x="0.1" y="0" relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Functions -> Auth (verify token) -->
+        <mxCell id="e-fn-auth" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#D6B656;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="p1-mw1" target="p1-auth">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1350" y="713" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-fn-auth-lbl" value="ID Token検証&#10;(Admin SDK)" style="edgeLabel;html=1;fontSize=10;fontColor=#7A6300;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="e-fn-auth">
+          <mxGeometry x="0.2" relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Repository -> Firestore -->
+        <mxCell id="e-repo-db" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9673A6;strokeWidth=2.5;endArrow=block;startArrow=block;endFill=1;startFill=1;" edge="1" parent="1" source="p1-infra" target="p1-firestore">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="972" y="1000" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-repo-db-lbl" value="Firebase Admin SDK&#10;CRUD / Transaction" style="edgeLabel;html=1;fontSize=10;fontColor=#5E3D7A;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="e-repo-db">
+          <mxGeometry x="0.1" relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ical export from reservations router -->
+        <mxCell id="e-ical" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;strokeWidth=1.5;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="p1-d3" target="p1-ical">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- CI/CD deploy arrows -->
+        <mxCell id="e-cd-host" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#B85450;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="p1-deploy" target="p1-hosting">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1210" y="290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-cd-host-lbl" value="firebase deploy" style="edgeLabel;html=1;fontSize=10;fontColor=#8A2A2A;labelBackgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="e-cd-host">
+          <mxGeometry x="-0.3" relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="p1-legend" value="凡例" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fontSize=11;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="820" width="220" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-lg1" value="クライアント / SPA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=10;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1255" y="850" width="190" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-lg2" value="Firebase Hosting / SPA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;fontSize=10;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1255" y="878" width="190" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-lg3" value="Cloud Functions API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=10;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1255" y="906" width="190" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-lg4" value="Firestore / 認証" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=10;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1255" y="934" width="190" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-lg5" value="CI/CD / 外部" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;fontSize=10;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1255" y="962" width="190" height="22" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <!-- ================================================================= -->
+  <!-- PAGE 2 : 予約作成データフロー（シーケンス）                        -->
+  <!-- ================================================================= -->
+  <diagram name="2. 予約作成フロー" id="page-flow">
+    <mxGraphModel dx="1422" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1050" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="p2-title" value="予約作成データフロー（トランザクションによる定員制御）" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=20;fontStyle=1;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="900" height="32" as="geometry" />
+        </mxCell>
+
+        <!-- Lifelines (actors) -->
+        <mxCell id="p2-a1" value="利用者&#10;(ReservationPage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=12;fontStyle=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="80" width="180" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-a2" value="api.ts&#10;(fetch クライアント)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;fontSize=12;fontStyle=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="330" y="80" width="180" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-a3" value="Express API&#10;reservations.ts + MW" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=12;fontStyle=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="600" y="80" width="180" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-a4" value="domain/&#10;availability.ts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=12;fontStyle=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="870" y="80" width="180" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-a5" value="firestoreRepository&#10;(Admin SDK)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=12;fontStyle=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="80" width="180" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-a6" value="Cloud Firestore&#10;reservations / auditLogs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;fontStyle=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="80" width="120" height="56" as="geometry" />
+        </mxCell>
+
+        <!-- Lifelines vertical -->
+        <mxCell id="p2-l1" style="endArrow=none;html=1;strokeColor=#6C8EBF;strokeWidth=1.5;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="150" y="136" as="sourcePoint" /><mxPoint x="150" y="940" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-l2" style="endArrow=none;html=1;strokeColor=#D79B00;strokeWidth=1.5;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="420" y="136" as="sourcePoint" /><mxPoint x="420" y="940" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-l3" style="endArrow=none;html=1;strokeColor=#82B366;strokeWidth=1.5;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="690" y="136" as="sourcePoint" /><mxPoint x="690" y="940" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-l4" style="endArrow=none;html=1;strokeColor=#82B366;strokeWidth=1.5;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="960" y="136" as="sourcePoint" /><mxPoint x="960" y="940" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-l5" style="endArrow=none;html=1;strokeColor=#82B366;strokeWidth=1.5;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1230" y="136" as="sourcePoint" /><mxPoint x="1230" y="940" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-l6" style="endArrow=none;html=1;strokeColor=#9673A6;strokeWidth=1.5;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1420" y="136" as="sourcePoint" /><mxPoint x="1420" y="940" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <!-- Messages -->
+        <mxCell id="p2-m1" value="① 施設・日付を選択 → GET /availability で空き枠表示" style="html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.5;fontSize=11;fontColor=#222222;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="150" y="180" as="sourcePoint" /><mxPoint x="690" y="180" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-m2" value="② フォーム送信 createReservation(payload)" style="html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.5;fontSize=11;fontColor=#222222;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="150" y="230" as="sourcePoint" /><mxPoint x="420" y="230" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-m3" value="③ POST /reservations（Zod検証 + rateLimitByIp 10req/10min）" style="html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.5;fontSize=11;fontColor=#222222;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="420" y="280" as="sourcePoint" /><mxPoint x="690" y="280" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-m4" value="④ 施設取得・営業時間/休業日/ブロック期間を検証" style="html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.5;fontSize=11;fontColor=#222222;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="690" y="330" as="sourcePoint" /><mxPoint x="960" y="330" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-m5" value="⑤ isWithinOperatingHours / isFacilityUnavailableOnDate → OK" style="html=1;endArrow=open;endFill=0;strokeColor=#666666;strokeWidth=1.2;dashed=1;fontSize=11;fontColor=#555555;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="960" y="375" as="sourcePoint" /><mxPoint x="690" y="375" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-m6" value="⑥ createReservation() 呼び出し" style="html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.5;fontSize=11;fontColor=#222222;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="690" y="420" as="sourcePoint" /><mxPoint x="1230" y="420" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <!-- Transaction box -->
+        <mxCell id="p2-txn" value="runTransaction" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#9673A6;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;fontSize=12;fontStyle=2;fontColor=#5E3D7A;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="450" width="320" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-m7" value="⑦ 同一枠の予約件数を集計 (facilityId, date, startTime)" style="html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.5;fontSize=11;fontColor=#222222;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1230" y="490" as="sourcePoint" /><mxPoint x="1420" y="490" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-m8" value="⑧ count を返却" style="html=1;endArrow=open;endFill=0;strokeColor=#666666;strokeWidth=1.2;dashed=1;fontSize=11;fontColor=#555555;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1420" y="530" as="sourcePoint" /><mxPoint x="1230" y="530" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-guard" value="[ count ≧ capacity ]&#10;→ CAPACITY_EXCEEDED で 409 を返しロールバック" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;fontSize=10;fontColor=#7A1F1F;align=left;spacingLeft=8;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="548" width="280" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-m9" value="⑨ [ count &lt; capacity ] reservation を status=pending で作成" style="html=1;endArrow=block;endFill=1;strokeColor=#82B366;strokeWidth=1.8;fontSize=11;fontColor=#2E6B33;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1230" y="610" as="sourcePoint" /><mxPoint x="1420" y="610" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <!-- after txn -->
+        <mxCell id="p2-m10" value="⑩ writeAuditLog(action=reservation.created)" style="html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.5;fontSize=11;fontColor=#222222;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1230" y="680" as="sourcePoint" /><mxPoint x="1420" y="680" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-m11" value="⑪ reservationId / reservationCode を返却" style="html=1;endArrow=open;endFill=0;strokeColor=#666666;strokeWidth=1.2;dashed=1;fontSize=11;fontColor=#555555;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1230" y="725" as="sourcePoint" /><mxPoint x="690" y="725" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-m12" value="⑫ 201 Created { reservationId, reservationCode }" style="html=1;endArrow=open;endFill=0;strokeColor=#666666;strokeWidth=1.2;dashed=1;fontSize=11;fontColor=#555555;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="690" y="765" as="sourcePoint" /><mxPoint x="150" y="765" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-m13" value="⑬ /complete へ遷移し予約コードを表示（メール送信なし・コード保管を案内）" style="html=1;endArrow=block;endFill=1;strokeColor=#6C8EBF;strokeWidth=1.8;fontSize=11;fontColor=#3A567F;align=center;verticalAlign=bottom;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="150" y="820" as="sourcePoint" /><mxPoint x="150" y="870" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="p2-complete" value="CompletePage&#10;予約コード（IDの先頭8文字を大文字化）を表示" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="872" width="320" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p2-note" value="補足: 予約後の承認 (pending→confirmed) / キャンセルは管理者または会員セルフサービス（コード+Email）が PATCH 系 API 経由で実施し、各操作は auditLogs に記録される。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;fontColor=#5A4A00;align=left;spacingLeft=10;spacingTop=6;verticalAlign=top;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="430" y="860" width="700" height="70" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <!-- ================================================================= -->
+  <!-- PAGE 3 : Firestore データモデル（ER 図）                          -->
+  <!-- ================================================================= -->
+  <diagram name="3. データモデル(ER)" id="page-er">
+    <mxGraphModel dx="1422" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1050" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="p3-title" value="Firestore データモデル（コレクション / 主要フィールド・論理リレーション）" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=20;fontStyle=1;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1000" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-note0" value="NoSQL のためRDBの外部キー制約は存在せず、facilityId 等で論理参照する。容量効率のため一部は非正規化（facilityName 複製など）。" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="40" y="54" width="1100" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- facilities -->
+        <mxCell id="p3-fac" value="facilities（施設マスタ）" style="swimlane;html=1;startSize=30;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=13;fontStyle=1;fontColor=#3D2A52;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="110" width="320" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-fac-r" value="🔑 facilityId : string  (docID, 例 free-mat)&#10;name : string&#10;capacity : number  (同時予約上限)&#10;openHour / closeHour : number&#10;slotDurationMinutes : number&#10;closedWeekdays : number[]  (0=日…6=土)&#10;maintenanceDates : string[]  (YYYY-MM-DD)&#10;weekdayHours? : WeekdayHours[]  (曜日別)&#10;blockedPeriods? : BlockedPeriod[]&#10;isActive : boolean&#10;createdAt / updatedAt : Timestamp" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="140" width="320" height="290" as="geometry" />
+        </mxCell>
+
+        <!-- reservations -->
+        <mxCell id="p3-res" value="reservations（予約レコード）" style="swimlane;html=1;startSize=30;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=13;fontStyle=1;fontColor=#3D2A52;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="560" y="110" width="360" height="430" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-res-r" value="🔑 reservationId : string  (docID = UUID)&#10;reservationCode : string  (ID先頭8文字大文字 / 照会用)&#10;memberName : string  (ニックネーム・任意)&#10;email : string&#10;emailLower : string  (正規化・照会インデックス)&#10;🔗 facilityId : string  → facilities&#10;facilityName : string  (非正規化)&#10;date : string  (YYYY-MM-DD)&#10;startTime / endTime : string  (HH:MM)&#10;purpose : string&#10;participants : number&#10;remarks : string  (任意)&#10;status : enum(pending|confirmed|cancelled)&#10;cancelledAt? : Timestamp&#10;cancelReason? : string&#10;createdAt / updatedAt : Timestamp" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="560" y="140" width="360" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-res-idx" value="複合インデックス: (date,startTime) / (facilityId,date,startTime) /&#10;(status,date,startTime) / (facilityId,status,date,startTime)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3EEF7;strokeColor=#9673A6;fontSize=10;fontColor=#5E3D7A;align=left;spacingLeft=8;dashed=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="560" y="550" width="360" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- admins -->
+        <mxCell id="p3-adm" value="admins（管理者）" style="swimlane;html=1;startSize=30;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=13;fontStyle=1;fontColor=#3D2A52;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="110" width="320" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-adm-r" value="🔑 uid : string  (docID = Firebase UID)&#10;email : string&#10;displayName : string&#10;createdAt : Timestamp" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="140" width="320" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- auditLogs -->
+        <mxCell id="p3-aud" value="auditLogs（監査ログ）" style="swimlane;html=1;startSize=30;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=13;fontStyle=1;fontColor=#3D2A52;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="300" width="320" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-aud-r" value="🔑 logId : string  (docID)&#10;actor : string  (admin UID | member | system)&#10;action : enum&#10;　reservation.created / confirmed /&#10;　cancelled / deleted / content.updated&#10;🔗 targetId : string  → reservations 等&#10;payload : object  (文脈データ)&#10;timestamp : Timestamp" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="330" width="320" height="210" as="geometry" />
+        </mxCell>
+
+        <!-- siteContent -->
+        <mxCell id="p3-cms" value="siteContent（利用案内CMS）" style="swimlane;html=1;startSize=30;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=13;fontStyle=1;fontColor=#3D2A52;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="490" width="380" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-cms-r" value="🔑 docID : usage-guide&#10;reservationSteps : string[]  (編集可能な手順)&#10;notes : string[]  (編集可能な注意事項)&#10;updatedAt? : Timestamp&#10;updatedBy? : string  (admin UID)" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="520" width="380" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- relationships -->
+        <mxCell id="p3-rel1" value="1 : N&#10;facilityId で論理参照" style="endArrow=ERmany;startArrow=ERone;html=1;strokeColor=#9673A6;strokeWidth=2;fontSize=11;fontColor=#5E3D7A;" edge="1" parent="1" source="p3-fac" target="p3-res">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-rel2" value="1 : N&#10;targetId 参照" style="endArrow=ERmany;startArrow=ERone;html=1;strokeColor=#9673A6;strokeWidth=2;fontSize=11;fontColor=#5E3D7A;" edge="1" parent="1" source="p3-res" target="p3-aud">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3-rel3" value="actor (UID)" style="endArrow=ERmany;startArrow=ERone;html=1;strokeColor=#9673A6;strokeWidth=1.5;dashed=1;fontSize=11;fontColor=#5E3D7A;" edge="1" parent="1" source="p3-adm" target="p3-aud">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- security note -->
+        <mxCell id="p3-sec" value="セキュリティルール要点&#10;・facilities / siteContent(usage-guide): 読取=公開、書込=Functions経由のみ&#10;・reservations: 読取=管理者のみ、書込=Functions経由のみ（クライアント直書き禁止）&#10;・admins: 自分のドキュメントのみ読取可&#10;・auditLogs: クライアントアクセス不可（Functions専用）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;fontColor=#5A4A00;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="560" y="630" width="840" height="120" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
