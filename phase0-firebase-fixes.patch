@@ -1,0 +1,381 @@
+diff --git a/functions/src/api/availability.ts b/functions/src/api/availability.ts
+index 407b42c..6fadc2c 100644
+--- a/functions/src/api/availability.ts
++++ b/functions/src/api/availability.ts
+@@ -1,6 +1,7 @@
+ import { Router, Request, Response } from 'express';
+ import { getFacility, getReservationSummaryBySlot } from '../infra/firestoreRepository';
+ import { generateSlots } from '../domain/availability';
++import { todayJst, nowJstMinutes } from '../domain/date';
+ import { AvailabilitySlot } from '../../../shared/types';
+ 
+ const router = Router();
+@@ -29,8 +30,8 @@ router.get('/', async (req: Request, res: Response) => {
+   const slotTemplates = generateSlots(facility, date);
+   const counts        = await getReservationSummaryBySlot(facilityId, date);
+   const now           = new Date();
+-  const todayStr      = now.toISOString().split('T')[0];
+-  const nowMin        = now.getHours() * 60 + now.getMinutes();
++  const todayStr      = todayJst(now);
++  const nowMin        = nowJstMinutes(now);
+ 
+   const slots: AvailabilitySlot[] = slotTemplates.map((s) => {
+     const summary     = counts.get(s.startTime) ?? { currentCount: 0, reservedNames: [] };
+diff --git a/functions/src/api/facilities.ts b/functions/src/api/facilities.ts
+index d268cc1..b1b094e 100644
+--- a/functions/src/api/facilities.ts
++++ b/functions/src/api/facilities.ts
+@@ -5,6 +5,7 @@ import {
+   listFacilitiesAdmin,
+   createFacility,
+   updateFacility,
++  writeAuditLog,
+ } from '../infra/firestoreRepository';
+ import { requireAdmin, getActor } from './middleware';
+ import {
+@@ -43,7 +44,8 @@ router.post('/admin', requireAdmin, async (req: Request, res: Response) => {
+ 
+   try {
+     const facility = await createFacility(parsed.data);
+-    console.log('[facility.created]', getActor(req), facility.facilityId);
++    // B-6: console.log のみで監査ログに残っていなかった変更を auditLogs へ記録する
++    await writeAuditLog(getActor(req), 'facility.created', facility.facilityId, parsed.data);
+     res.status(201).json({ success: true, facility });
+   } catch (error) {
+     const err = error as { code?: string };
+@@ -75,7 +77,8 @@ router.patch('/admin/:id', requireAdmin, async (req: Request, res: Response) =>
+ 
+   try {
+     const facility = await updateFacility(req.params.id, parsed.data);
+-    console.log('[facility.updated]', getActor(req), facility.facilityId);
++    // B-6: console.log のみで監査ログに残っていなかった変更を auditLogs へ記録する
++    await writeAuditLog(getActor(req), 'facility.updated', facility.facilityId, parsed.data);
+     res.json({ success: true, facility });
+   } catch (error) {
+     const err = error as { code?: string };
+diff --git a/functions/src/api/reservations.routeOrder.test.ts b/functions/src/api/reservations.routeOrder.test.ts
+new file mode 100644
+index 0000000..62212f8
+--- /dev/null
++++ b/functions/src/api/reservations.routeOrder.test.ts
+@@ -0,0 +1,46 @@
++import * as fs from 'fs';
++import * as path from 'path';
++
++// B-2 回帰テスト:「/admin/export が CSV を返すこと」（設計書 8.3 の CI 必須ケース）。
++//
++// 実際に発生していた不具合は Express のルートマッチング順序に起因していた。
++// `/admin/:id` が `/admin/export` より先に定義されていたため、
++// `GET /admin/export` は `id="export"` として `/admin/:id` に吸収され、
++// 存在しない予約IDとして常に 404 を返していた（本文ハンドラは一切実行されない）。
++//
++// このテストは reservations.ts を実際に import せず、ソースを静的に走査して
++// `router.get('/admin/export', ...)` の登場位置が `router.get('/admin/:id', ...)`
++// より前であることを検査する。実行時 import にすると shared/types.ts 経由の
++// zod 解決がテスト環境の node_modules ホイスティングに依存してしまい、
++// このテストの本来の目的（ルート定義順の回帰防止）と関係のない要因で
++// 壊れうるため、意図的に静的検査に留めている。
++describe('reservations router のルート定義順（B-2 の再発防止）', () => {
++  const source = fs.readFileSync(path.join(__dirname, 'reservations.ts'), 'utf8');
++
++  function indexOfRouteDefinition(routePath: string, method = 'get'): number {
++    const needle = `router.${method}('${routePath}'`;
++    return source.indexOf(needle);
++  }
++
++  it('/admin/export が /admin/:id より前に定義されている', () => {
++    const exportIdx = indexOfRouteDefinition('/admin/export');
++    const wildcardIdx = indexOfRouteDefinition('/admin/:id');
++
++    expect(exportIdx).toBeGreaterThan(-1);
++    expect(wildcardIdx).toBeGreaterThan(-1);
++    expect(exportIdx).toBeLessThan(wildcardIdx);
++  });
++
++  it('/admin/stats も /admin/:id より前に定義されている（既存の正しい実装を退行させない）', () => {
++    const statsIdx = indexOfRouteDefinition('/admin/stats');
++    const wildcardIdx = indexOfRouteDefinition('/admin/:id');
++
++    expect(statsIdx).toBeGreaterThan(-1);
++    expect(statsIdx).toBeLessThan(wildcardIdx);
++  });
++
++  it('/admin/export の定義は router ファイル内に1箇所だけ存在する（重複定義の再発防止）', () => {
++    const occurrences = source.split(`router.get('/admin/export'`).length - 1;
++    expect(occurrences).toBe(1);
++  });
++});
+diff --git a/functions/src/api/reservations.ts b/functions/src/api/reservations.ts
+index 9adfab6..c39ac15 100644
+--- a/functions/src/api/reservations.ts
++++ b/functions/src/api/reservations.ts
+@@ -342,6 +342,53 @@ router.get('/admin', requireAdmin, async (req: Request, res: Response) => {
+   res.json({ success: true, ...result });
+ });
+ 
++/**
++ * GET /admin/export — CSV エクスポート
++ *
++ * B-2: 以前は `/admin/:id` より後に定義されていたため、Express のルート
++ * マッチングで `/admin/export` が `id="export"` として `/admin/:id` に
++ * 吸収され、常に 404 になっていた（ルート定義順のバグ）。`:id` を含む
++ * ワイルドカードルートより前に、より具体的な静的パスを定義する。
++ */
++router.get('/admin/export', requireAdmin, async (req: Request, res: Response) => {
++  const { status, facilityId, dateFrom, dateTo } = req.query as Record<string, string>;
++
++  const { reservations } = await listReservations({
++    status:     (status as ReservationStatus) || undefined,
++    facilityId: facilityId || undefined,
++    dateFrom:   dateFrom   || undefined,
++    dateTo:     dateTo     || undefined,
++    limit:      5000,
++  });
++
++  const BOM = '﻿';
++  const header = '予約番号,会員名,メールアドレス,施設名,利用日,開始時刻,終了時刻,参加人数,利用目的,備考,ステータス,登録日時\n';
++  const rows = reservations.map((r) => {
++    const createdAt = r.createdAt
++      ? new Date((r.createdAt as { _seconds: number })._seconds * 1000).toISOString()
++      : '';
++    return [
++      r.reservationId.slice(0, 8).toUpperCase(),
++      r.memberName,
++      r.email,
++      r.facilityName,
++      r.date,
++      r.startTime,
++      r.endTime,
++      r.participants,
++      `"${r.purpose.replace(/"/g, '""')}"`,
++      `"${(r.remarks ?? '').replace(/"/g, '""')}"`,
++      r.status,
++      createdAt,
++    ].join(',');
++  });
++
++  const csv = BOM + header + rows.join('\n');
++  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
++  res.setHeader('Content-Disposition', `attachment; filename="reservations_${dateFrom ?? ''}_${dateTo ?? ''}.csv"`);
++  res.send(csv);
++});
++
+ /** GET /admin/reservations/:id — 予約詳細 */
+ router.get('/admin/:id', requireAdmin, async (req: Request, res: Response) => {
+   const { reservations } = await listReservations({ limit: 1 });
+@@ -418,44 +465,4 @@ router.delete('/admin/:id', requireAdmin, async (req: Request, res: Response) =>
+   }
+ });
+ 
+-/** GET /admin/export — CSV エクスポート */
+-router.get('/admin/export', requireAdmin, async (req: Request, res: Response) => {
+-  const { status, facilityId, dateFrom, dateTo } = req.query as Record<string, string>;
+-
+-  const { reservations } = await listReservations({
+-    status:     (status as ReservationStatus) || undefined,
+-    facilityId: facilityId || undefined,
+-    dateFrom:   dateFrom   || undefined,
+-    dateTo:     dateTo     || undefined,
+-    limit:      5000,
+-  });
+-
+-  const BOM = '\uFEFF';
+-  const header = '予約番号,会員名,メールアドレス,施設名,利用日,開始時刻,終了時刻,参加人数,利用目的,備考,ステータス,登録日時\n';
+-  const rows = reservations.map((r) => {
+-    const createdAt = r.createdAt
+-      ? new Date((r.createdAt as { _seconds: number })._seconds * 1000).toISOString()
+-      : '';
+-    return [
+-      r.reservationId.slice(0, 8).toUpperCase(),
+-      r.memberName,
+-      r.email,
+-      r.facilityName,
+-      r.date,
+-      r.startTime,
+-      r.endTime,
+-      r.participants,
+-      `"${r.purpose.replace(/"/g, '""')}"`,
+-      `"${(r.remarks ?? '').replace(/"/g, '""')}"`,
+-      r.status,
+-      createdAt,
+-    ].join(',');
+-  });
+-
+-  const csv = BOM + header + rows.join('\n');
+-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+-  res.setHeader('Content-Disposition', `attachment; filename="reservations_${dateFrom ?? ''}_${dateTo ?? ''}.csv"`);
+-  res.send(csv);
+-});
+-
+ export default router;
+diff --git a/functions/src/domain/capacity.test.ts b/functions/src/domain/capacity.test.ts
+new file mode 100644
+index 0000000..411c7f6
+--- /dev/null
++++ b/functions/src/domain/capacity.test.ts
+@@ -0,0 +1,37 @@
++import { wouldExceedCapacity, sumParticipants } from './capacity';
++
++// B-1 回帰テスト: 「定員 10 名の枠に 5 名 × 3 件を投げて 3 件目が拒否されること」
++// （設計書 8.3 の CI 必須ケース）。
++// 旧実装は予約の「件数」で定員判定していたため、1 件あたりの人数に関わらず
++// capacity 件目までは無条件に通ってしまっていた（例: 定員 10 名でも 1 名予約なら 10 件通る）。
++describe('wouldExceedCapacity / sumParticipants（B-1: 人数ベースの定員判定）', () => {
++  it('定員10名の枠に5名 → 4名は合計9名で成功する', () => {
++    const existing = sumParticipants([{ participants: 5 }]);
++    expect(wouldExceedCapacity(existing, 4, 10)).toBe(false);
++  });
++
++  it('定員10名の枠に5名を3件投げると、3件目（合計15名）は拒否される', () => {
++    const capacity = 10;
++    const accepted: number[] = [];
++    for (const participants of [5, 5, 5]) {
++      const existing = sumParticipants(accepted.map((p) => ({ participants: p })));
++      if (wouldExceedCapacity(existing, participants, capacity)) {
++        continue; // 拒否
++      }
++      accepted.push(participants);
++    }
++    expect(accepted).toEqual([5, 5]); // 1, 2件目のみ成功（合計10名）、3件目は拒否
++  });
++
++  it('旧実装（件数ベース）では見逃していたケース: 1名予約を件数分（定員回数）通してしまわない', () => {
++    // 定員2名の枠。旧実装は「件数 < capacity」で判定するため、
++    // 1名予約を2件（合計2名）は通り、さらに1名予約の3件目も
++    // 「件数2 >= capacity2」でようやく弾かれる=結果は正しく見えるが、
++    // 人数の内訳が偏ると（例: 2名予約1件 + 1名予約1件 = 件数2, 人数3）容易に破綻する。
++    const capacity = 2;
++    let existing = sumParticipants([{ participants: 2 }]); // 件数1、人数2
++    expect(wouldExceedCapacity(existing, 1, capacity)).toBe(true); // 人数ベースなら正しく拒否
++    existing = sumParticipants([{ participants: 2 }, { participants: 1 }]);
++    void existing;
++  });
++});
+diff --git a/functions/src/domain/capacity.ts b/functions/src/domain/capacity.ts
+new file mode 100644
+index 0000000..8fd8c1b
+--- /dev/null
++++ b/functions/src/domain/capacity.ts
+@@ -0,0 +1,23 @@
++/**
++ * 定員判定（B-1 の根治）。
++ *
++ * 施設の「定員」は人数であり、予約の件数ではない。旧実装は
++ * `conflictSnap.size >= capacity`（同一枠の予約ドキュメント件数）で判定していたため、
++ * 例えば定員 10 名の枠でも「1 名の予約」を 10 件受け付けてしまい、実際には
++ * 100 名が枠に割り当てられる、あるいは逆に「5 名の予約」が 2 件しか通らず
++ * 定員 10 名のうち 8 名分を無駄にする、という 2 方向の不整合を同時に抱えていた。
++ *
++ * 正しい不変条件は「既存予約の参加人数合計 + 今回追加する参加人数 <= 施設定員」。
++ */
++export function wouldExceedCapacity(
++  existingParticipants: number,
++  additionalParticipants: number,
++  capacity: number
++): boolean {
++  return existingParticipants + additionalParticipants > capacity;
++}
++
++/** 同一枠の既存予約（pending/confirmed）から参加人数の合計を求める。 */
++export function sumParticipants(reservations: ReadonlyArray<{ participants: number }>): number {
++  return reservations.reduce((sum, r) => sum + (Number(r.participants) || 0), 0);
++}
+diff --git a/functions/src/domain/date.test.ts b/functions/src/domain/date.test.ts
+new file mode 100644
+index 0000000..a9d9c0a
+--- /dev/null
++++ b/functions/src/domain/date.test.ts
+@@ -0,0 +1,29 @@
++import { todayJst, nowJstMinutes } from './date';
++
++// B-3 回帰テスト: 「JST 18:00 時点で 17:00 の枠が予約不可であること」（設計書 8.3 の CI 必須ケース）。
++// 現行の不具合は `now.getHours()` / `toISOString().split('T')[0]` が
++// Cloud Functions の実行環境 TZ（UTC）に依存していたことが原因だった。
++describe('nowJstMinutes / todayJst（B-3: JST 判定の一元化）', () => {
++  it('UTC 09:00（= JST 18:00）を JST の 18:00 として計算する', () => {
++    const now = new Date('2026-07-25T09:00:00.000Z');
++    expect(nowJstMinutes(now)).toBe(18 * 60);
++    // 17:00 の枠は 17:00 <= 18:00 なので「過去」判定になるべき
++    const slotMin = 17 * 60;
++    expect(slotMin <= nowJstMinutes(now)).toBe(true);
++  });
++
++  it('UTC 15:30（= JST 翌 00:30）は日付が UTC とは異なる', () => {
++    // UTC ではまだ 7/25 だが JST ではすでに 7/26 に日付が進んでいる。
++    // 旧実装（toISOString().split('T')[0]）はここで前日の日付を返し、
++    // 「日付が変わった直後の過去枠」を誤って予約可能と判定してしまっていた。
++    const now = new Date('2026-07-25T15:30:00.000Z');
++    expect(todayJst(now)).toBe('2026-07-26');
++    expect(nowJstMinutes(now)).toBe(0 * 60 + 30);
++  });
++
++  it('UTC 00:00（= JST 09:00、営業開始時刻）は境界を跨がない通常ケース', () => {
++    const now = new Date('2026-07-25T00:00:00.000Z');
++    expect(todayJst(now)).toBe('2026-07-25');
++    expect(nowJstMinutes(now)).toBe(9 * 60);
++  });
++});
+diff --git a/functions/src/domain/date.ts b/functions/src/domain/date.ts
+index 715eb35..7bab762 100644
+--- a/functions/src/domain/date.ts
++++ b/functions/src/domain/date.ts
+@@ -4,6 +4,18 @@ export function todayJst(now: Date = new Date()): string {
+   return jst.toISOString().split('T')[0];
+ }
+ 
++/**
++ * JST の壁時計における「0:00 からの分数」を返す。
++ *
++ * B-3: `now.getHours()` は Cloud Functions のランタイム TZ（UTC）に依存するため、
++ * JST 09:00〜18:00 の間、過去枠判定が最大 9 時間ずれるバグの原因になっていた。
++ * JST への変換は必ずこの関数（または {@link todayJst}）経由で行うこと。
++ */
++export function nowJstMinutes(now: Date = new Date()): number {
++  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
++  return jst.getUTCHours() * 60 + jst.getUTCMinutes();
++}
++
+ /** "YYYY-MM-DD" の日付を days 日ずらした文字列を返す */
+ export function shiftDateString(date: string, days: number): string {
+   const d = new Date(date + 'T00:00:00Z');
+diff --git a/functions/src/infra/firestoreRepository.ts b/functions/src/infra/firestoreRepository.ts
+index aeadd95..fb3eea8 100644
+--- a/functions/src/infra/firestoreRepository.ts
++++ b/functions/src/infra/firestoreRepository.ts
+@@ -15,6 +15,7 @@ import {
+   UsageGuideContent,
+   UsageGuideContentDoc,
+ } from '../../../shared/types';
++import { wouldExceedCapacity, sumParticipants } from '../domain/capacity';
+ 
+ const USAGE_GUIDE_DOC = 'usage-guide';
+ 
+@@ -180,7 +181,12 @@ export async function createReservation(
+     const facilitySnap = await tx.get(db().collection('facilities').doc(data.facilityId));
+     const capacity: number = facilitySnap.data()?.capacity ?? 0;
+ 
+-    if (conflictSnap.size >= capacity) {
++    // 定員は「人数」であり「予約件数」ではない（B-1、判定ロジックは domain/capacity.ts に集約）
++    const existingParticipants = sumParticipants(
++      conflictSnap.docs.map((doc) => ({ participants: doc.data().participants }))
++    );
++
++    if (wouldExceedCapacity(existingParticipants, Number(data.participants) || 0, capacity)) {
+       throw Object.assign(new Error('CAPACITY_EXCEEDED'), { code: 'CAPACITY_EXCEEDED' });
+     }
+ 
+diff --git a/shared/types.ts b/shared/types.ts
+index a4993d4..20566e3 100644
+--- a/shared/types.ts
++++ b/shared/types.ts
+@@ -168,7 +168,9 @@ export type AuditAction =
+   | 'reservation.confirmed'
+   | 'reservation.cancelled'
+   | 'reservation.deleted'
+-  | 'content.updated';
++  | 'content.updated'
++  | 'facility.created'
++  | 'facility.updated';
+ 
+ export interface AuditLog {
+   logId: string;

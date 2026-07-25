@@ -28,3 +28,10 @@ database-debug.log
 .vscode/
 *.tgz
 tri-force-koenji-reservation-firebase-adminsdk*.json
+
+# リアーキ版モノレポ（Next.js / turbo / Drizzle）
+.next
+.turbo
+*.tsbuildinfo
+coverage
+migrations/meta/*.json.bak

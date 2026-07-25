@@ -1,0 +1,20 @@
+flowchart LR
+  P["<b>apps/web</b><br/><small>(public) / (admin)<br/>RSC・Server Actions</small>"]
+  Q["<b>packages/db</b><br/><small>Drizzle スキーマ<br/>マイグレーション・クエリ</small>"]
+  C["<b>packages/core</b><br/><small>純関数・zod スキーマ<br/>availability / ical / time</small>"]
+  S[("PostgreSQL")]
+  N["<b>依存は一方向のみ</b><br/><small>core は db にも web にも依存しない。<br/>Biome の import ルールで機械的に強制する。</small>"]
+
+  P --> Q
+  P --> C
+  Q --> C
+  Q --> S
+
+  classDef app  fill:#eef2ff,stroke:#6366f1,stroke-width:1.5px,color:#1e1b4b
+  classDef data fill:#ecfdf5,stroke:#10b981,stroke-width:1.5px,color:#022c22
+  classDef core fill:#fef9c3,stroke:#ca8a04,stroke-width:1.5px,color:#422006
+  classDef note fill:#ffffff,stroke:#cbd5e1,stroke-width:1px,color:#475569
+  class P app
+  class Q,S data
+  class C core
+  class N note

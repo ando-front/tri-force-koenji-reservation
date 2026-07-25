@@ -1,0 +1,20 @@
+sequenceDiagram
+  autonumber
+  actor A as 管理者
+  participant M as Edge Middleware
+  participant S as Supabase Auth
+  participant P as PostgreSQL
+
+  A->>S: Google OIDC ログイン
+  S-->>A: セッション Cookie（HttpOnly / Secure）
+  Note over A,S: JS からトークンに触れないため<br/>XSS で盗まれない
+  A->>M: GET /admin/reservations
+  M->>S: セッション検証
+  M->>P: admin_users に uid が存在するか
+  alt 管理者として登録済み
+    M->>P: RSC が予約一覧を直接クエリ
+    Note over M,P: RLS が二重の防壁として働く
+    M-->>A: サーバ描画済み HTML
+  else 未登録 / 未ログイン
+    M-->>A: /admin/login へリダイレクト
+  end

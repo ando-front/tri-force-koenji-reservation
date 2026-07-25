@@ -1,0 +1,36 @@
+flowchart TB
+  subgraph client["クライアント"]
+    U["会員ブラウザ"]
+    A["管理者ブラウザ"]
+  end
+
+  subgraph fb["Firebase"]
+    H["Firebase Hosting<br/><small>frontend/dist（Vite SPA）</small>"]
+    F["Cloud Functions v2<br/><small>Express / asia-northeast1<br/>maxInstances=10 / 256MiB / 30s<br/>ルータ定義 20 本</small>"]
+    FS[("Cloud Firestore<br/><small>facilities / reservations<br/>admins / auditLogs / siteContent</small>")]
+    AU["Firebase Auth<br/><small>Google ログイン（管理者のみ）</small>"]
+  end
+
+  subgraph ci["GitHub Actions"]
+    C1["ci.yml<br/><small>型チェック + Jest</small>"]
+    C2["deploy.yml（97行）<br/><small>Hosting Action + firebase CLI<br/>+ 非推奨トークン + .env 生成</small>"]
+    C3["staging.yml（114行）"]
+  end
+
+  U --> H
+  A --> H
+  H -->|"fetch<br/>VITE_FUNCTIONS_BASE_URL"| F
+  A -->|"IDトークン取得"| AU
+  F -->|"Admin SDK"| FS
+  F -->|"verifyIdToken"| AU
+  C1 -.-> C2
+  C2 --> H
+  C2 --> F
+  C3 -.-> H
+
+  classDef cl fill:#f1f5f9,stroke:#64748b,stroke-width:1.5px,color:#0f172a
+  classDef fbs fill:#fff7ed,stroke:#f59e0b,stroke-width:1.5px,color:#451a03
+  classDef cis fill:#f5f3ff,stroke:#a78bfa,stroke-width:1.5px,color:#2e1065
+  class U,A cl
+  class H,F,FS,AU fbs
+  class C1,C2,C3 cis

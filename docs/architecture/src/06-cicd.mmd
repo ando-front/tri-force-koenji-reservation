@@ -1,0 +1,18 @@
+flowchart LR
+  PR["Pull Request"]
+  T["turbo run<br/>lint / typecheck / test<br/><small>差分パッケージのみ</small>"]
+  PV["Vercel Preview<br/><small>PR ごとに自動生成</small>"]
+  E2E["Playwright E2E<br/><small>Preview URL に対して実行</small>"]
+  RV["レビュー"]
+  MG["main へマージ"]
+  MIG["drizzle-kit<br/>migrate"]
+  PROD["Vercel Production<br/><small>自動デプロイ</small>"]
+
+  PR --> T --> PV --> E2E --> RV --> MG --> MIG --> PROD
+
+  classDef ci   fill:#f5f3ff,stroke:#a78bfa,stroke-width:1.5px,color:#2e1065
+  classDef app  fill:#eef2ff,stroke:#6366f1,stroke-width:1.5px,color:#1e1b4b
+  classDef data fill:#ecfdf5,stroke:#10b981,stroke-width:1.5px,color:#022c22
+  class PR,T,E2E,RV,MG ci
+  class PV,PROD app
+  class MIG data

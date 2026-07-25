@@ -1,0 +1,73 @@
+erDiagram
+  facilities ||--o{ reservations : "対象"
+  facilities ||--o{ facility_weekday_hours : "曜日別営業時間"
+  facilities ||--o{ facility_closures : "定休・メンテナンス"
+  facilities ||--o{ facility_blocked_periods : "利用不可時間帯"
+  facilities ||--o{ slot_occupancy : "枠占有"
+  reservations ||--o{ reservation_events : "監査ログ"
+  admin_users ||--o{ reservation_events : "操作者"
+
+  facilities {
+    text id PK
+    text name
+    int capacity
+    int slot_duration_minutes
+    int open_hour
+    int close_hour
+    boolean is_active
+  }
+  facility_weekday_hours {
+    text facility_id FK
+    int weekday
+    int open_hour
+    int close_hour
+    int slot_duration_minutes
+  }
+  facility_closures {
+    text facility_id FK
+    date closed_on
+    text reason
+  }
+  facility_blocked_periods {
+    uuid id PK
+    text facility_id FK
+    time start_time
+    time end_time
+    int_ARRAY weekdays
+    date_ARRAY dates
+  }
+  reservations {
+    uuid id PK
+    text facility_id FK
+    timestamptz starts_at
+    timestamptz ends_at
+    tstzrange period "生成列"
+    text member_name
+    citext email
+    int participants
+    text purpose
+    text remarks
+    reservation_status status
+    text idempotency_key "UNIQUE"
+    timestamptz expires_at
+  }
+  slot_occupancy {
+    text facility_id PK
+    timestamptz starts_at PK
+    int capacity_snapshot
+    int participants_total "CHECK <= capacity"
+  }
+  reservation_events {
+    uuid id PK
+    uuid reservation_id FK
+    audit_action action
+    text actor
+    jsonb payload
+    timestamptz occurred_at
+  }
+  admin_users {
+    uuid id PK
+    uuid auth_user_id
+    text email
+    text display_name
+  }
