@@ -1,0 +1,45 @@
+flowchart TB
+  subgraph client["クライアント"]
+    U["会員<br/><small>スマホ / PC</small>"]
+    A["管理者"]
+  end
+
+  subgraph vercel["Vercel"]
+    E["Edge Middleware<br/><small>認証ガード / レートリミット</small>"]
+    R["React Server Components<br/><small>空き状況・予約一覧を<br/>サーバで描画</small>"]
+    SA["Server Actions<br/><small>予約作成・キャンセル</small>"]
+    RH["Route Handlers<br/><small>/api/ics, /api/admin/export</small>"]
+  end
+
+  subgraph supabase["Supabase"]
+    PG[("PostgreSQL 16<br/><small>RLS 有効<br/>CHECK / UNIQUE / EXCLUDE 制約</small>")]
+    AUTH["Supabase Auth<br/><small>管理者: Google OIDC</small>"]
+  end
+
+  subgraph obs["監視・補助"]
+    SE["Sentry"]
+    KV["Vercel KV（Redis）<br/><small>分散レートリミット</small>"]
+  end
+
+  U --> E
+  A --> E
+  E --> R
+  E --> SA
+  E --> RH
+  R -->|"Drizzle ORM"| PG
+  SA -->|"Drizzle ORM"| PG
+  RH -->|"Drizzle ORM"| PG
+  A -->|"HttpOnly Cookie"| AUTH
+  E -->|"セッション検証"| AUTH
+  E -.-> KV
+  R -.-> SE
+  SA -.-> SE
+
+  classDef cl fill:#f1f5f9,stroke:#64748b,stroke-width:1.5px,color:#0f172a
+  classDef app fill:#eef2ff,stroke:#6366f1,stroke-width:1.5px,color:#1e1b4b
+  classDef data fill:#ecfdf5,stroke:#10b981,stroke-width:1.5px,color:#022c22
+  classDef ext fill:#f5f3ff,stroke:#a78bfa,stroke-width:1.5px,color:#2e1065
+  class U,A cl
+  class E,R,SA,RH app
+  class PG,AUTH data
+  class SE,KV ext

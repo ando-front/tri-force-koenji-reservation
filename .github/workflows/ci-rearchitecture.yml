@@ -1,0 +1,76 @@
+name: CI
+
+# 設計書 8.4: turbo run lint/typecheck/test を差分パッケージのみ実行 → Vercel Preview →
+# Playwright E2E → レビュー → main マージで drizzle-kit migrate → Vercel Production。
+# 旧 deploy.yml(97行, firebase-tools + 非推奨トークン) / staging.yml(114行) は
+# このワークフロー1本 + Vercel の Git 連携（Preview 自動生成）に置き換わる。
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tfk_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/tfk_test
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations (incl. RLS)
+        run: pnpm --filter @tfk/db db:migrate
+
+      # CI で必ず落とすべきケース（設計書 8.3）は packages/db/src/queries/reservations.test.ts
+      # と packages/core の各 *.test.ts に含まれる:
+      #  - 定員10名の枠に5名×3件で3件目が拒否される（B-1）
+      #  - JST 18:00時点で17:00の枠が予約不可（B-3）
+      #  - 同一冪等キーの二重送信で予約が1件のみ作られる（B-5）
+      - run: pnpm turbo run lint typecheck test build
+
+  # main マージ後のみ、実データベースへマイグレーションを適用する。
+  # Vercel へのデプロイ自体は Vercel の GitHub 連携（Git push → 自動デプロイ）に任せ、
+  # ここでは「マイグレーションが正しく実データに適用されること」だけを担保する。
+  migrate-production:
+    if: github.ref == 'refs/heads/main'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @tfk/db db:migrate

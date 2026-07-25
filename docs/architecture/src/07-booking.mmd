@@ -1,0 +1,28 @@
+sequenceDiagram
+  autonumber
+  actor M as 会員
+  participant SA as Server Action
+  participant DB as PostgreSQL
+
+  M->>SA: 予約送信（hidden field に idempotency_key）
+  SA->>DB: BEGIN / book_reservation(...)
+  DB->>DB: facilities を FOR SHARE で読む
+
+  alt 同じ idempotency_key が既存
+    DB-->>SA: 既存の予約 ID を返す
+    SA-->>M: 予約完了（重複作成なし）
+  else 新規リクエスト
+    DB->>DB: slot_occupancy へ INSERT ... ON CONFLICT DO UPDATE
+    Note over DB: participants_total += participants<br/>行ロックで同時実行が直列化される
+    alt 合計 > capacity_snapshot
+      DB-->>SA: 23514 within_capacity 違反 → ROLLBACK
+      SA-->>M: 「この時間帯は満員です」＋最新の空き状況
+    else 定員内
+      DB->>DB: reservations へ INSERT
+      DB->>DB: reservation_events へ監査ログ
+      DB-->>SA: COMMIT / 予約 ID
+      SA-->>M: 予約完了（予約番号を表示）
+    end
+  end
+
+  Note over SA,DB: アプリ側に排他制御コードは一行もない。<br/>10 並列テストで定員超過ゼロを確認済み。
