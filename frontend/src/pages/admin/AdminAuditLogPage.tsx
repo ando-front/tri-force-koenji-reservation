@@ -12,6 +12,8 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   'reservation.cancelled': '予約キャンセル',
   'reservation.deleted':   '予約削除',
   'content.updated':       'サイト文言更新',
+  'facility.created':      '施設作成',
+  'facility.updated':      '施設更新',
 };
 
 const ACTION_COLOR: Record<AuditAction, string> = {
@@ -20,6 +22,8 @@ const ACTION_COLOR: Record<AuditAction, string> = {
   'reservation.cancelled': 'bg-yellow-100  text-yellow-800',
   'reservation.deleted':   'bg-red-100     text-red-800',
   'content.updated':       'bg-purple-100  text-purple-800',
+  'facility.created':      'bg-indigo-100  text-indigo-800',
+  'facility.updated':      'bg-teal-100    text-teal-800',
 };
 
 const ACTOR_LABEL: Record<string, string> = {
