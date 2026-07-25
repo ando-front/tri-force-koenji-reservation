@@ -342,6 +342,53 @@ router.get('/admin', requireAdmin, async (req: Request, res: Response) => {
   res.json({ success: true, ...result });
 });
 
+/**
+ * GET /admin/export — CSV エクスポート
+ *
+ * B-2: 以前は `/admin/:id` より後に定義されていたため、Express のルート
+ * マッチングで `/admin/export` が `id="export"` として `/admin/:id` に
+ * 吸収され、常に 404 になっていた（ルート定義順のバグ）。`:id` を含む
+ * ワイルドカードルートより前に、より具体的な静的パスを定義する。
+ */
+router.get('/admin/export', requireAdmin, async (req: Request, res: Response) => {
+  const { status, facilityId, dateFrom, dateTo } = req.query as Record<string, string>;
+
+  const { reservations } = await listReservations({
+    status:     (status as ReservationStatus) || undefined,
+    facilityId: facilityId || undefined,
+    dateFrom:   dateFrom   || undefined,
+    dateTo:     dateTo     || undefined,
+    limit:      5000,
+  });
+
+  const BOM = '\uFEFF';
+  const header = '予約番号,会員名,メールアドレス,施設名,利用日,開始時刻,終了時刻,参加人数,利用目的,備考,ステータス,登録日時\n';
+  const rows = reservations.map((r) => {
+    const createdAt = r.createdAt
+      ? new Date((r.createdAt as { _seconds: number })._seconds * 1000).toISOString()
+      : '';
+    return [
+      r.reservationId.slice(0, 8).toUpperCase(),
+      r.memberName,
+      r.email,
+      r.facilityName,
+      r.date,
+      r.startTime,
+      r.endTime,
+      r.participants,
+      `"${r.purpose.replace(/"/g, '""')}"`,
+      `"${(r.remarks ?? '').replace(/"/g, '""')}"`,
+      r.status,
+      createdAt,
+    ].join(',');
+  });
+
+  const csv = BOM + header + rows.join('\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="reservations_${dateFrom ?? ''}_${dateTo ?? ''}.csv"`);
+  res.send(csv);
+});
+
 /** GET /admin/reservations/:id — 予約詳細 */
 router.get('/admin/:id', requireAdmin, async (req: Request, res: Response) => {
   const { reservations } = await listReservations({ limit: 1 });
@@ -416,46 +463,6 @@ router.delete('/admin/:id', requireAdmin, async (req: Request, res: Response) =>
     }
     throw err;
   }
-});
-
-/** GET /admin/export — CSV エクスポート */
-router.get('/admin/export', requireAdmin, async (req: Request, res: Response) => {
-  const { status, facilityId, dateFrom, dateTo } = req.query as Record<string, string>;
-
-  const { reservations } = await listReservations({
-    status:     (status as ReservationStatus) || undefined,
-    facilityId: facilityId || undefined,
-    dateFrom:   dateFrom   || undefined,
-    dateTo:     dateTo     || undefined,
-    limit:      5000,
-  });
-
-  const BOM = '\uFEFF';
-  const header = '予約番号,会員名,メールアドレス,施設名,利用日,開始時刻,終了時刻,参加人数,利用目的,備考,ステータス,登録日時\n';
-  const rows = reservations.map((r) => {
-    const createdAt = r.createdAt
-      ? new Date((r.createdAt as { _seconds: number })._seconds * 1000).toISOString()
-      : '';
-    return [
-      r.reservationId.slice(0, 8).toUpperCase(),
-      r.memberName,
-      r.email,
-      r.facilityName,
-      r.date,
-      r.startTime,
-      r.endTime,
-      r.participants,
-      `"${r.purpose.replace(/"/g, '""')}"`,
-      `"${(r.remarks ?? '').replace(/"/g, '""')}"`,
-      r.status,
-      createdAt,
-    ].join(',');
-  });
-
-  const csv = BOM + header + rows.join('\n');
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="reservations_${dateFrom ?? ''}_${dateTo ?? ''}.csv"`);
-  res.send(csv);
 });
 
 export default router;
