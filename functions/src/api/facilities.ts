@@ -5,6 +5,7 @@ import {
   listFacilitiesAdmin,
   createFacility,
   updateFacility,
+  writeAuditLog,
 } from '../infra/firestoreRepository';
 import { requireAdmin, getActor } from './middleware';
 import {
@@ -43,7 +44,8 @@ router.post('/admin', requireAdmin, async (req: Request, res: Response) => {
 
   try {
     const facility = await createFacility(parsed.data);
-    console.log('[facility.created]', getActor(req), facility.facilityId);
+    // B-6: console.log のみで監査ログに残っていなかった変更を auditLogs へ記録する
+    await writeAuditLog(getActor(req), 'facility.created', facility.facilityId, parsed.data);
     res.status(201).json({ success: true, facility });
   } catch (error) {
     const err = error as { code?: string };
@@ -75,7 +77,8 @@ router.patch('/admin/:id', requireAdmin, async (req: Request, res: Response) => 
 
   try {
     const facility = await updateFacility(req.params.id, parsed.data);
-    console.log('[facility.updated]', getActor(req), facility.facilityId);
+    // B-6: console.log のみで監査ログに残っていなかった変更を auditLogs へ記録する
+    await writeAuditLog(getActor(req), 'facility.updated', facility.facilityId, parsed.data);
     res.json({ success: true, facility });
   } catch (error) {
     const err = error as { code?: string };

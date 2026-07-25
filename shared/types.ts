@@ -168,7 +168,9 @@ export type AuditAction =
   | 'reservation.confirmed'
   | 'reservation.cancelled'
   | 'reservation.deleted'
-  | 'content.updated';
+  | 'content.updated'
+  | 'facility.created'
+  | 'facility.updated';
 
 export interface AuditLog {
   logId: string;

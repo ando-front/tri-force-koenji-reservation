@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getFacility, getReservationSummaryBySlot } from '../infra/firestoreRepository';
 import { generateSlots } from '../domain/availability';
+import { todayJst, nowJstMinutes } from '../domain/date';
 import { AvailabilitySlot } from '../../../shared/types';
 
 const router = Router();
@@ -29,8 +30,8 @@ router.get('/', async (req: Request, res: Response) => {
   const slotTemplates = generateSlots(facility, date);
   const counts        = await getReservationSummaryBySlot(facilityId, date);
   const now           = new Date();
-  const todayStr      = now.toISOString().split('T')[0];
-  const nowMin        = now.getHours() * 60 + now.getMinutes();
+  const todayStr      = todayJst(now);
+  const nowMin        = nowJstMinutes(now);
 
   const slots: AvailabilitySlot[] = slotTemplates.map((s) => {
     const summary     = counts.get(s.startTime) ?? { currentCount: 0, reservedNames: [] };

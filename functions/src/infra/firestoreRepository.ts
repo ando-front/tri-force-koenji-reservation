@@ -15,6 +15,7 @@ import {
   UsageGuideContent,
   UsageGuideContentDoc,
 } from '../../../shared/types';
+import { wouldExceedCapacity, sumParticipants } from '../domain/capacity';
 
 const USAGE_GUIDE_DOC = 'usage-guide';
 
@@ -180,7 +181,12 @@ export async function createReservation(
     const facilitySnap = await tx.get(db().collection('facilities').doc(data.facilityId));
     const capacity: number = facilitySnap.data()?.capacity ?? 0;
 
-    if (conflictSnap.size >= capacity) {
+    // 定員は「人数」であり「予約件数」ではない（B-1、判定ロジックは domain/capacity.ts に集約）
+    const existingParticipants = sumParticipants(
+      conflictSnap.docs.map((doc) => ({ participants: doc.data().participants }))
+    );
+
+    if (wouldExceedCapacity(existingParticipants, Number(data.participants) || 0, capacity)) {
       throw Object.assign(new Error('CAPACITY_EXCEEDED'), { code: 'CAPACITY_EXCEEDED' });
     }
 
